@@ -4,6 +4,12 @@ Kalkulator sizing server AI on-premise untuk inference, RAG, fine-tuning, dan pr
 Hasilnya berupa spesifikasi GPU, node, CPU, RAM, storage, jaringan, daya, ruang rak, dan estimasi CAPEX,
 yang bisa diexport ke Excel dan PDF.
 
+Hasil sizing juga diubah menjadi **Bill of Quantity (BoQ) Cisco AI POD** lengkap dengan SKU/PID:
+server UCS C845A M8 / C880A M8 (HGX B300) / C885A M8 (MI350X), CPU, memori, GPU, drive, NIC, optik,
+switch Nexus (frontend, backend Scale Unit, OOB), Nexus Dashboard, Intersight, NVIDIA AI Enterprise,
+Red Hat OpenShift, layanan, dan rak. Referensi SKU: dokumen resmi Cisco per 27 Okt 2026.
+Struktur `VENDORS` di `index.html` disiapkan untuk menambah Dell, HPE, dan Supermicro.
+
 **Aplikasi live:** https://fadliramm.github.io/AI-Infrastructure-Calculator/
 
 ## Versi utama
