@@ -113,6 +113,11 @@ tr.na td{color:var(--muted)}
 .sw div{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
 .sw b{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
 .mono{font-family:var(--f-mono)}
+.bqhead{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px 16px;margin-bottom:4px}
+.bqhead h2{margin:0}
+.bqpick{display:flex;align-items:center;gap:8px}
+.bqpick label{font-size:12.5px;color:var(--muted)}
+.bqpick select{width:auto;min-width:220px;font-weight:600;border-color:var(--accent)}
 table.bq td{font-size:12.5px}
 table.bq td.pid{white-space:nowrap}
 tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg)}
@@ -266,14 +271,7 @@ tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-tr
 
       <fieldset>
         <legend>Bill of Quantity (BoQ)</legend>
-        <div class="f full"><label for="vendor">Referensi vendor</label>
-          <select id="vendor">
-            <option value="cisco" selected>Cisco AI POD (UCS + Nexus)</option>
-            <option value="dell" disabled>Dell AI Factory (segera)</option>
-            <option value="hpe" disabled>HPE Private Cloud AI (segera)</option>
-            <option value="supermicro" disabled>Supermicro (segera)</option>
-          </select>
-          <span class="hint">GPU dipetakan ke platform vendor yang paling mendekati, lengkap dengan SKU/PID.</span></div>
+        <p class="hint full f">Brand (Cisco, Dell, HPE, Supermicro) dipilih langsung di bagian BoQ pada hasil. Opsi di bawah berlaku untuk semua brand.</p>
         <div class="f"><label for="bqNs">NIC north-south</label>
           <select id="bqNs"><option value="cx7">ConnectX-7 2×200G</option><option value="dpu">BlueField-3 B3220 DPU</option></select></div>
         <div class="f"><label for="bqTerm">Masa lisensi &amp; support</label>
@@ -281,7 +279,7 @@ tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-tr
         <div class="f"><label for="bqSw">Platform software</label>
           <select id="bqSw"><option value="oai" selected>Red Hat OpenShift AI</option><option value="ocp">Red Hat OpenShift</option><option value="none">Tanpa (OS/K8s sendiri)</option></select></div>
         <div class="f"><label for="bqRackKW">Daya maks per rak <span class="u">(kW)</span></label><input type="number" id="bqRackKW" value="20" min="5" step="1"></div>
-        <label class="chk"><input type="checkbox" id="bqMgmt" checked> Sertakan klaster manajemen (UCS X-Series untuk control plane OpenShift)</label>
+        <label class="chk"><input type="checkbox" id="bqMgmt" checked> Sertakan klaster manajemen (3 server control plane OpenShift)</label>
       </fieldset>
     </form>
 
@@ -291,7 +289,7 @@ tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-tr
   <footer class="foot">
     <span>Versi utama: <a href="https://fadliramm.github.io/AI-Infrastructure-Calculator/" target="_blank" rel="noopener">fadliramm.github.io/AI-Infrastructure-Calculator</a></span>
     <span>Kode sumber: <a href="https://github.com/fadliramm/AI-Infrastructure-Calculator" target="_blank" rel="noopener">github.com/fadliramm/AI-Infrastructure-Calculator</a></span>
-    <span>Rilis 27 Okt 2026 · BoQ Cisco AI POD</span>
+    <span>Rilis 27 Okt 2026 · BoQ Cisco, Dell, HPE, Supermicro</span>
   </footer>
 </div>
 
@@ -867,7 +865,7 @@ function buildBoQCisco(R){
     const r = c.rag;
     c845('Compute – Server RAG (embedding, reranker, vector DB)', 'l40s', r.embGpus, {train:false, cores:r.cores, ram:r.ram, nvme:r.stor, ew:false});
   }
-  if(!T.servers) return {vendor:'Cisco AI POD', lines:[], notes:['Tidak ada klaster yang bisa dipetakan ke Cisco AI POD.'], subs, T};
+  if(!T.servers) return {vendor:'Cisco AI POD', ref:`dokumen resmi Cisco per ${CISCO.refDate}`, lines:[], notes:['Tidak ada klaster yang bisa dipetakan ke Cisco AI POD.'], subs, T:{...T, switches:0, racks:0}};
 
   // ---- Jaringan backend (east-west) mengikuti Scale Unit AI POD
   let switches = 0;
@@ -984,16 +982,397 @@ function buildBoQCisco(R){
   notes.unshift(`SKU mengacu dokumen resmi Cisco per ${CISCO.refDate}. Validasi konfigurasi akhir, ketersediaan, dan harga lewat Cisco Commerce (CCW) atau partner Cisco.`);
   notes.push('C885A M8 dengan H200 dan MI300X sudah End-of-Sale (25 Jun 2026); GPU tersebut dipetakan ke B300 (C880A M8) atau MI350X (C885A M8).');
   notes.push('Hardware support (Solution Support / CX Success Track) dipilih per baris di CCW dan diselaraskan dengan masa lisensi software.');
-  return {vendor:'Cisco AI POD', lines: head.concat(L), notes, subs, T: {...T, switches, racks}};
+  return {vendor:'Cisco AI POD', ref:`dokumen resmi Cisco per ${CISCO.refDate}`, lines: head.concat(L), notes, subs, T: {...T, switches, racks}};
 }
 
-const VENDORS = {
-  cisco: {name:'Cisco AI POD', build: buildBoQCisco},
-  // dell: {name:'Dell AI Factory', build: buildBoQDell},
-  // hpe: {name:'HPE Private Cloud AI', build: buildBoQHpe},
-  // supermicro: {name:'Supermicro', build: buildBoQSupermicro},
+/* ---------- Mesin BoQ generik untuk Dell, HPE, Supermicro ---------- */
+// Tiap vendor mendefinisikan: sub (GPU -> GPU tersedia), platform (GPU -> fungsi server), net (model switch),
+// software/services, dan placeholder SKU (ph) untuk item yang kodenya hanya keluar dari konfigurator vendor.
+const GPU_DESC = {
+  l4:'NVIDIA L4 24GB 72W (single-wide)', l40s:'NVIDIA L40S 48GB 350W', rtx6kb:'NVIDIA RTX PRO 6000 Blackwell Server Edition 96GB 600W',
+  h200nvl:'NVIDIA H200 NVL 141GB 600W',
 };
-function buildBoQ(R){ const v = VENDORS[$('vendor').value]; return v ? v.build(R) : null; }
+const pickBy = (list, need) => list.find(x=>x[0] >= need) || list[list.length-1];
+function pickDimm(list, slots, needGB){
+  const d = list.find(x=>slots*x[0] >= needGB);
+  return d ? {d, n:slots} : {d:list[list.length-1], n:slots};
+}
+function pickDrive(list, needTB){
+  const d = needTB<=7.68 ? list[0] : needTB<=30.72 ? list[1] : list[2];
+  return {d, n: Math.max(2, ceil(needTB/d[0]) + (ceil(needTB/d[0])%2))};
+}
+function packPcie(gpusNeeded, maxPer, allowed){
+  const nodes = ceil(gpusNeeded/maxPer);
+  const want = ceil(gpusNeeded/nodes);
+  const per = allowed ? (allowed.find(a=>a>=want) || maxPer) : Math.min(maxPer, want + (want%2));
+  return {nodes, per};
+}
+function leafSpine(units, perSw){
+  if(units <= perSw*2) return {leaves:2, spines:0, up:0};
+  const leaves = 2*ceil(units/perSw);
+  return {leaves, spines: Math.max(2, 2*ceil(leaves/4)), up: leaves*perSw/2};
+}
+
+function buildBoQGeneric(R, V){
+  const p = R.I.p, c = R.chosen;
+  const term = +$('bqTerm').value, sw = $('bqSw').value, nsSel = $('bqNs').value, rackKW = num('bqRackKW') || 20;
+  const L = [], notes = [], subs = [];
+  const add = (sec, pid, desc, qty, note) => { if(qty>0) L.push({sec, pid: pid || V.ph, desc, qty, note: note||''}); };
+  const T = {servers:0, gpus:0, nvGpus:0, ew400:0, ew800:0, ns200:0, kw:0, ru:0};
+  const X = {add, notes, T, nsSel, term, V};
+
+  for(const k of c.clusters){
+    const train = k.role!=='Klaster inference';
+    let gid = k.gpu.id, cl = k, plan = c;
+    let target = V.sub[gid] || gid;
+    if(V.smallHgxToPcie && ['h100','h200','b200'].includes(gid) && !train && k.gpusNeeded<8) target = 'h200nvl';
+    if(target!==gid){
+      const alt = R.all.find(a=>a.gpu.id===target);
+      const altCl = alt?.clusters.find(x=>x.role===k.role);
+      if(!altCl){ notes.push(`${k.role}: ${k.gpu.name} tidak punya padanan ${V.name} yang muat untuk beban ini.`); continue; }
+      cl = altCl; plan = alt;
+      subs.push(`${k.role.replace('Klaster ','')}: ${k.gpu.name} → ${V.gpuLabel?.[target] || altCl.gpu.name} (${altCl.gpusNeeded} GPU)`);
+      if(!alt.ok) notes.push(`Perhatian: dengan ${altCl.gpu.name}, ${alt.issues.join(' ').toLowerCase()}`);
+    }
+    const sec = 'Compute – ' + cl.role.replace('Klaster ','').replace(/^./,s=>s.toUpperCase());
+    const ew = train ? (cl.gpusNeeded > 8) : (plan.inf && plan.inf.tp > 8);
+    const fn = V.platform[target];
+    if(fn) fn(X, sec, target, cl.gpusNeeded, {train, cores:cl.cores, ram:cl.ram, nvme:cl.nvme, ew});
+    else notes.push(`${cl.gpu.name} belum dipetakan untuk ${V.name}.`);
+  }
+  if(c.rag){
+    const r = c.rag;
+    V.platform.l40s(X, 'Compute – Server RAG (embedding, reranker, vector DB)', 'l40s', r.embGpus, {train:false, cores:r.cores, ram:r.ram, nvme:r.stor, ew:false});
+  }
+  if(!T.servers) return {vendor:V.name, ref:V.ref, lines:[], notes:[`Tidak ada klaster yang bisa dipetakan ke ${V.name}.`], subs, T:{...T, switches:0, racks:0}};
+
+  // Backend east-west: switch 800G 64 port; NIC 400G memakai breakout 2x400G
+  let switches = 0;
+  const units = T.ew800 + ceil(T.ew400/2);
+  const backend = units > 0;
+  if(backend){
+    const sec = 'Jaringan backend (GPU east-west)';
+    const f = leafSpine(units, 64);
+    add(sec, V.net.be[0], V.net.be[1]+' – leaf', f.leaves, `${T.ew800?T.ew800+' port 800G':''}${T.ew800&&T.ew400?' + ':''}${T.ew400?T.ew400+' port 400G (breakout)':''}, rail-optimized`);
+    if(f.spines) add(sec, V.net.be[0], V.net.be[1]+' – spine', f.spines, 'non-blocking');
+    add(sec, V.net.beOptic[0], V.net.beOptic[1], units + f.up*2, 'sisi switch');
+    add(sec, V.net.cable[0], V.net.cable[1], (units + f.up)*2, 'sesuaikan panjang');
+    if(V.net.beLic) add(sec, V.net.beLic[0], V.net.beLic[1], f.leaves+f.spines);
+    switches += f.leaves + f.spines;
+  }
+  // Frontend north-south: switch 400G 32 port, 1 port = 2 port server 200G (breakout)
+  {
+    const sec = 'Jaringan frontend (north-south & storage)';
+    const swPorts = ceil(T.ns200/2);
+    const n = 2*ceil((ceil(swPorts/2) + 8)/32);
+    add(sec, V.net.fe[0], V.net.fe[1], n, `${T.ns200} port server 200G`);
+    add(sec, V.net.feOptic[0], V.net.feOptic[1], swPorts, 'sisi switch, breakout 2x200G');
+    add(sec, V.net.feOptic[0], V.net.feOptic[1].replace(/\(.*\)/,'(uplink core/storage)'), n*4);
+    switches += n;
+  }
+  // OOB & manajemen
+  const mgmt = sw!=='none' && $('bqMgmt').checked;
+  {
+    const sec = 'Manajemen & OOB';
+    add(sec, V.net.oob[0], V.net.oob[1], T.servers<=4 ? 1 : 2*ceil(T.servers/24));
+    if(V.fabricMgr) add(sec, V.fabricMgr[0], V.fabricMgr[1], 1);
+    if(mgmt) V.mgmtCluster.forEach(m=>add(sec, m[0], m[1], m[2], m[3]));
+  }
+  // Software & lisensi
+  {
+    const sec = 'Software & lisensi';
+    V.mgmtSw(X, sec, T.servers + (mgmt?3:0));
+    if(T.nvGpus) add(sec, V.nvaie?.[0], `NVIDIA AI Enterprise per GPU, ${term} tahun`, T.nvGpus, '1 per GPU NVIDIA');
+    if(sw!=='none'){
+      add(sec, V.rh?.[0], `Red Hat OpenShift Container Platform, bare metal, ${term} tahun`, T.servers, 'qty = jumlah server GPU');
+      if(sw==='oai') add(sec, V.rh?.[0], `Red Hat OpenShift AI, bare metal, ${term} tahun`, T.servers);
+    }
+  }
+  V.services(X, 'Layanan & support', T.servers);
+  // Storage bersama
+  const m = R.I.m;
+  let storTB = 0;
+  if(c.tr) storTB = Math.max(20, p.tokensB*1e9*4*2/1e12 + m.params*14*p.ckptKeep/1000);
+  else if(c.ft) storTB = Math.max(10, m.params*16*3/1000 + p.samples*p.tokSample*4*2/1e12);
+  else if(c.rag) storTB = c.rag.stor*2;
+  if(storTB>0) add('Storage bersama', V.storage[0], V.storage[1], ceil(storTB), 'TB usable (perkiraan), terhubung 2x200G ke frontend');
+  // Rak
+  T.kw += switches*1.5 + (mgmt?2:0); T.ru += switches*2 + (mgmt?3:0) + 2;
+  const racks = Math.max(ceil(T.ru/40), ceil(T.kw/rackKW));
+  add('Rak', V.rack[0], V.rack[1], racks, `±${fmt(T.kw,1)} kW, ${T.ru} U, batas ${rackKW} kW/rak`);
+
+  notes.unshift(`Referensi: ${V.ref}. Validasi konfigurasi akhir, ketersediaan, dan harga lewat konfigurator resmi atau partner ${V.short}.`);
+  if(V.extraNotes) notes.push(...V.extraNotes);
+  return {vendor:V.name, ref:V.ref, lines:L, notes, subs, T:{...T, switches, racks}};
+}
+
+/* ---------- Dell ---------- */
+// Sumber: dell.com PowerEdge XE7745 / XE9780 / XE9785, technical guide XE9785, PowerSwitch Z-series (dicek 27 Okt 2026).
+// Dell tidak mempublikasikan part number; kode pesanan dibuat di konfigurator Dell (OSC / Dell Sales Tool).
+const DELL_CPU_AMD = { serve:[[32,'AMD EPYC 9355 32C 3.55GHz'],[48,'AMD EPYC 9455 48C 3.15GHz'],[64,'AMD EPYC 9555 64C 3.2GHz'],[96,'AMD EPYC 9655 96C 2.6GHz']],
+                       train:[[32,'AMD EPYC 9375F 32C 3.85GHz'],[48,'AMD EPYC 9475F 48C 3.65GHz'],[64,'AMD EPYC 9575F 64C 3.3GHz'],[96,'AMD EPYC 9655 96C 2.6GHz']] };
+const DDR5 = [[32,'32GB DDR5-6400 RDIMM'],[64,'64GB DDR5-6400 RDIMM'],[96,'96GB DDR5-6400 RDIMM'],[128,'128GB DDR5-6400 RDIMM']];
+const E3S = [[3.84,'3.84TB NVMe Gen5 E3.S Read Intensive'],[7.68,'7.68TB NVMe Gen5 E3.S Read Intensive'],[15.36,'15.36TB NVMe Gen5 E3.S Read Intensive']];
+function nicLines(X, sec, nodes, ewPerNode, nsPerNode, ewDesc, nsCx7, nsDpu, pids){
+  const {add, T, nsSel} = X;
+  if(ewPerNode){
+    add(sec, pids?.ew, ewDesc, nodes*ewPerNode); add(sec, pids?.ewOptic, 'Transceiver 400G (NIC east-west)', nodes*ewPerNode); T.ew400 += nodes*ewPerNode;
+  }
+  add(sec, nsSel==='dpu' ? pids?.dpu : pids?.ns, nsSel==='dpu' ? nsDpu : nsCx7, nodes*nsPerNode);
+  add(sec, pids?.nsOptic, 'Transceiver 200G (NIC north-south)', nodes*nsPerNode*2); T.ns200 += nodes*nsPerNode*2;
+}
+const DELL = {
+  name:'Dell AI Factory', short:'Dell', ph:'(Dell Sales Tool)',
+  ref:'spesifikasi resmi Dell PowerEdge XE7745, XE9780, XE9785 dan PowerSwitch Z-series per 27 Okt 2026',
+  sub:{a100:'h200nvl', h100:'b300', h200:'b300', mi300x:'mi350x'},
+  smallHgxToPcie:true,
+  gpuLabel:{mi350x:'AMD Instinct MI355X 288GB'},
+  platform:{},
+  net:{ be:['PowerSwitch Z9864F-ON','Dell PowerSwitch Z9864F-ON 64x 800GbE OSFP (Enterprise SONiC)'],
+        fe:['PowerSwitch Z9432F-ON','Dell PowerSwitch Z9432F-ON 32x 400GbE QSFP-DD'],
+        oob:['PowerSwitch N3248TE-ON','Dell PowerSwitch N3248TE-ON 48x 1GbE (OOB/iDRAC)'],
+        beOptic:[null,'Transceiver 800G OSFP 2xDR4 (switch backend)'], feOptic:[null,'Transceiver 400G QSFP-DD SR8 (switch frontend)'],
+        cable:[null,'Kabel fiber MPO-12 SMF'], beLic:['Enterprise SONiC','Lisensi Dell Enterprise SONiC + support'] },
+  fabricMgr:['SmartFabric Manager','Dell SmartFabric Manager / Enterprise SONiC fabric management'],
+  mgmtCluster:[['PowerEdge R670','Dell PowerEdge R670 1U (control plane OpenShift)',3,'3 node HA']],
+  mgmtSw(X, sec, n){ X.add(sec, 'iDRAC Datacenter', 'Lisensi iDRAC Datacenter', n); X.add(sec, 'OpenManage Enterprise Advanced+', 'Dell OpenManage Enterprise Advanced+ per server', n); },
+  nvaie:['NVIDIA AI Enterprise'], rh:['Red Hat via Dell'],
+  services(X, sec, n){ X.add(sec, 'ProSupport Plus', `Dell ProSupport Plus for Infrastructure, Mission Critical 4 jam, ${X.term} tahun`, n); X.add(sec, 'ProDeploy Plus', 'Dell ProDeploy Plus untuk server & fabric', 1); },
+  storage:['PowerScale F710 / F910','Dell PowerScale all-flash (F710/F910) atau ObjectScale'],
+  rack:['Dell NetShelter 42U','Rak 42U 600x1200 + PDU'],
+  extraNotes:['Kolom SKU Dell memuat nama model/opsi. Part number dan kode pesanan dibuat oleh konfigurator Dell (OSC / Dell Sales Tool) setelah konfigurasi dipilih.',
+    'XE9785 memakai AMD Instinct MI355X; perhitungan memakai performa MI350X (288GB) sebagai pendekatan konservatif.'],
+};
+DELL.platform.l4 = DELL.platform.l40s = DELL.platform.rtx6kb = DELL.platform.h200nvl = function(X, sec, gid, n, o){
+  const {nodes, per} = packPcie(n, gid==='l4'?16:8);
+  const cpu = pickBy(DELL_CPU_AMD[o.train?'train':'serve'], (o.cores||64)/2);
+  const mem = pickDimm(DDR5, 24, o.ram||0), drv = pickDrive(E3S, Math.max(3.84, o.nvme||0));
+  X.add(sec, 'PowerEdge XE7745', 'Dell PowerEdge XE7745 4U, 2S AMD EPYC 9005, hingga 8 GPU DW / 16 SW, air-cooled', nodes, `${per} GPU per server`);
+  X.add(sec, null, GPU_DESC[gid], nodes*per);
+  if(gid==='h200nvl') X.add(sec, null, per%4===0 ? 'NVIDIA NVLink Bridge 4-way H200 NVL' : 'NVIDIA NVLink Bridge 2-way H200 NVL', per%4===0 ? nodes*per/4 : nodes*per/2);
+  X.add(sec, null, cpu[1], nodes*2, `${cpu[0]*2} core/server`);
+  X.add(sec, null, mem.d[1], nodes*mem.n, `${fmt(mem.n*mem.d[0])} GB/server`);
+  X.add(sec, null, 'BOSS-N1 (2x 960GB M.2 NVMe, RAID-1) untuk OS', nodes);
+  X.add(sec, null, drv.d[1], nodes*drv.n, `${fmt(drv.n*drv.d[0],1)} TB data/server`);
+  nicLines(X, sec, nodes, o.ew ? Math.min(4, per/2) : 0, 1, 'NVIDIA ConnectX-7 1x400GbE OSFP (east-west)', 'NVIDIA ConnectX-7 2x200GbE QSFP112 (north-south)', 'NVIDIA BlueField-3 B3220 DPU 2x200G (north-south)');
+  X.add(sec, null, 'Broadcom 57414 2x25GbE OCP 3.0 (manajemen)', nodes);
+  X.add(sec, null, 'PSU 3200W Titanium hot-plug (4+4)', nodes*8);
+  X.T.servers += nodes; X.T.gpus += nodes*per; X.T.nvGpus += nodes*per; X.T.kw += nodes*(per*GPUS.find(g=>g.id===gid).tdp + 1400)/1000; X.T.ru += nodes*4;
+};
+DELL.platform.b200 = DELL.platform.b300 = function(X, sec, gid, n, o){
+  const nodes = ceil(n/8);
+  const mem = pickDimm(DDR5, 32, Math.max(2048, o.ram||0)), drv = pickDrive(E3S, Math.max(7.68, o.nvme||0));
+  X.add(sec, 'PowerEdge XE9780', `Dell PowerEdge XE9780 10U air-cooled, 2S Intel Xeon 6, NVIDIA HGX ${gid==='b300'?'B300':'B200'} 8-GPU`, nodes);
+  X.add(sec, null, gid==='b300' ? 'NVIDIA HGX B300 NVL8 (8x GPU SXM, ConnectX-8 terintegrasi 8x OSFP 800G)' : 'NVIDIA HGX B200 8-GPU 180GB SXM', nodes);
+  X.add(sec, null, 'Intel Xeon 6767P 64C 2.4GHz', nodes*2);
+  X.add(sec, null, mem.d[1], nodes*mem.n, `${fmt(mem.n*mem.d[0])} GB/server`);
+  X.add(sec, null, 'BOSS-N1 (2x 960GB M.2 NVMe, RAID-1) untuk OS', nodes);
+  X.add(sec, null, drv.d[1], nodes*drv.n, `${fmt(drv.n*drv.d[0],1)} TB data/server`);
+  if(o.ew){
+    if(gid==='b300'){ X.add(sec, null, 'Transceiver 800G OSFP (ConnectX-8 east-west)', nodes*8); X.T.ew800 += nodes*8; }
+    else { X.add(sec, null, 'NVIDIA ConnectX-7 1x400GbE OSFP (east-west)', nodes*8); X.add(sec, null, 'Transceiver 400G (NIC east-west)', nodes*8); X.T.ew400 += nodes*8; }
+  }
+  nicLines(X, sec, nodes, 0, 2, null, 'NVIDIA ConnectX-7 2x200GbE QSFP112 (north-south)', 'NVIDIA BlueField-3 B3220 DPU 2x200G (north-south)');
+  X.add(sec, null, 'Set PSU 3200W Titanium hot-plug (jumlah sesuai konfigurasi Dell)', nodes);
+  X.T.servers += nodes; X.T.gpus += nodes*8; X.T.nvGpus += nodes*8; X.T.kw += nodes*(gid==='b300'?14.5:12); X.T.ru += nodes*10;
+};
+DELL.platform.mi350x = function(X, sec, gid, n, o){
+  const nodes = ceil(n/8);
+  const mem = pickDimm(DDR5, 24, Math.max(2304, o.ram||0)), drv = pickDrive(E3S, Math.max(7.68, o.nvme||0));
+  X.add(sec, 'PowerEdge XE9785', 'Dell PowerEdge XE9785 10U, 2S AMD EPYC 9005, AMD Instinct MI355X 8-GPU', nodes);
+  X.add(sec, null, 'AMD Instinct MI355X 8-GPU OAM 288GB', nodes);
+  X.add(sec, null, 'AMD EPYC 9575F 64C 3.3GHz', nodes*2);
+  X.add(sec, null, mem.d[1], nodes*mem.n, `${fmt(mem.n*mem.d[0])} GB/server`);
+  X.add(sec, null, 'BOSS-N1 (2x 960GB M.2 NVMe, RAID-1) untuk OS', nodes);
+  X.add(sec, null, drv.d[1], nodes*drv.n, `${fmt(drv.n*drv.d[0],1)} TB data/server`);
+  nicLines(X, sec, nodes, o.ew ? 8 : 0, 2, 'AMD Pensando Pollara 400 1x400GbE (east-west)', 'NVIDIA ConnectX-7 2x200GbE QSFP112 (north-south)', 'NVIDIA BlueField-3 B3220 DPU 2x200G (north-south)');
+  X.add(sec, null, 'PSU hot-plug redundan (12 unit)', nodes*12);
+  X.T.servers += nodes; X.T.gpus += nodes*8; X.T.kw += nodes*14; X.T.ru += nodes*10;
+};
+
+/* ---------- HPE ---------- */
+// Sumber: HPE QuickSpecs ProLiant Compute DL380a Gen12 (a00047453enw) dan ProLiant Compute XD685 (a00073553enw, V11 Jan 2026);
+// switch AI fabric: HPE Juniper Networking QFX5240 (dokumentasi Juniper). Dicek 27 Okt 2026.
+const HPE_CPU_XEON = { serve:[[32,'P74573-B21','Intel Xeon 6730P 2.5GHz 32C 250W'],[48,'P73829-B21','Intel Xeon 6740P 2.1GHz 48C 270W'],[64,'P73832-B21','Intel Xeon 6760P 2.2GHz 64C 330W'],[86,'P73837-B21','Intel Xeon 6787P 2.0GHz 86C 350W']],
+                       train:[[32,'P74576-B21','Intel Xeon 6737P 2.9GHz 32C 270W'],[48,'P73831-B21','Intel Xeon 6747P 2.7GHz 48C 330W'],[64,'P73834-B21','Intel Xeon 6767P 2.4GHz 64C 350W'],[86,'P73837-B21','Intel Xeon 6787P 2.0GHz 86C 350W']] };
+const HPE_DIMM_DL = [[32,'P69727-B21','HPE 32GB DDR5-6400 RDIMM'],[64,'P69728-B21','HPE 64GB DDR5-6400 RDIMM'],[96,'P69729-B21','HPE 96GB DDR5-6400 RDIMM'],[128,'P69730-B21','HPE 128GB DDR5-6400 RDIMM'],[256,'P73447-B21','HPE 256GB DDR5-6400 3DS RDIMM']];
+const HPE_E3S_DL = [[3.84,'P57799-B21','HPE 3.84TB NVMe Gen5 RI E3.S PM1743'],[7.68,'P57803-B21','HPE 7.68TB NVMe Gen5 RI E3.S PM1743'],[15.36,'P57807-B21','HPE 15.36TB NVMe Gen5 RI E3.S PM1743']];
+const HPE_CPU_EPYC = [[32,'P73364-B21','AMD EPYC 9355 32C'],[48,'P73361-B21','AMD EPYC 9455 48C'],[64,'P73377-B21','AMD EPYC 9575F 64C'],[96,'P73357-B21','AMD EPYC 9655 96C']];
+const HPE_DIMM_XD = [[64,'P64986-H21','HPE 64GB DDR5-6400 RDIMM'],[96,'P64987-H21','HPE 96GB DDR5-6400 RDIMM'],[128,'P64988-H21','HPE 128GB DDR5-6400 RDIMM'],[256,'S5F74A','HPE XD 256GB DDR5-6400 3DS RDIMM']];
+const HPE_E3S_XD = [[3.84,'S4X30A','HPE XD685 3.84TB NVMe RI E3.S'],[7.68,'S4X32A','HPE XD685 7.68TB NVMe RI E3.S'],[15.36,'S4X33A','HPE XD685 15.36TB NVMe RI E3.S']];
+const pickT = (list, need) => list.find(x=>x[0] >= need) || list[list.length-1];
+const HPE = {
+  name:'HPE Private Cloud AI / ProLiant', short:'HPE', ph:'(konfigurator HPE)',
+  ref:'HPE QuickSpecs ProLiant Compute DL380a Gen12 dan XD685 (V11, Jan 2026), HPE Juniper QFX5240, per 27 Okt 2026',
+  sub:{a100:'h200nvl', h100:'h200', mi300x:'mi350x'},
+  smallHgxToPcie:true,
+  gpuLabel:{mi350x:'AMD Instinct MI355X 288GB'},
+  platform:{},
+  net:{ be:['QFX5240-64OD','HPE Juniper QFX5240-64OD 64x 800GbE OSFP (Junos OS Evolved)'],
+        fe:['QFX5130-32CD','HPE Juniper QFX5130-32CD 32x 400GbE QSFP-DD'],
+        oob:['EX4100-48T','HPE Juniper EX4100-48T 48x 1GbE (OOB/iLO)'],
+        beOptic:[null,'Transceiver 800G OSFP 2xDR4 (switch backend)'], feOptic:[null,'Transceiver 400G QSFP-DD SR8 (switch frontend)'],
+        cable:[null,'Kabel fiber MPO-12 SMF'], beLic:[null,'Lisensi Junos Advanced/Premium untuk QFX5240'] },
+  fabricMgr:['Juniper Apstra','Juniper Apstra data center fabric management'],
+  mgmtCluster:[[null,'HPE ProLiant Compute DL360 Gen12 1U (control plane OpenShift)',3,'3 node HA']],
+  mgmtSw(X, sec, n){
+    const com = {1:'R7A10AAE', 3:'R7A11AAE', 5:'R7A12AAE'}[X.term];
+    X.add(sec, com, `HPE Compute Ops Management Enhanced ${X.term} tahun (SaaS)`, n);
+    X.add(sec, X.term===1 ? '512485-B21' : 'BD505A', `HPE iLO Advanced 1-server license, ${X.term===1?1:3} tahun support`, n);
+  },
+  nvaie:[null], rh:[null],
+  services(X, sec, n){
+    if(X.T.dl) X.add(sec, X.term===5 ? 'H47WCE' : X.term===3 ? 'H47TXE' : null, `HPE Tech Care Essential DL380a Gen12, ${X.term} tahun`, X.T.dl);
+    if(X.T.xd) X.add(sec, null, `HPE Tech Care Essential/Critical XD685, ${X.term} tahun`, X.T.xd);
+    X.add(sec, 'U4554E', 'HPE ProLiant DL/ML Install Service', X.T.dl || 0);
+    X.add(sec, null, 'HPE Factory Express / instalasi rack & fabric', 1);
+  },
+  storage:[null,'HPE Alletra Storage MP X10000 / GreenLake for File Storage'],
+  rack:[null,'HPE Advanced Series Rack 42U 600x1200 + PDU'],
+  extraNotes:['Item bertanda "(konfigurator HPE)" belum tercantum di QuickSpecs yang dirujuk (mis. part number RTX PRO 6000, optik, lisensi NVAIE); pilih lewat HPE One Config Advanced (OCA).',
+    'XD685 untuk B300 dan MI355X memakai pendinginan cairan langsung (DLC) sehingga butuh CDU dan pipa air di ruang server.'],
+};
+HPE.platform.l4 = HPE.platform.l40s = HPE.platform.rtx6kb = HPE.platform.h200nvl = function(X, sec, gid, n, o){
+  const {nodes, per} = packPcie(n, gid==='l4'?16:8, gid==='l4' ? [2,4,8,16] : [2,4,8]);
+  const gpuPid = {l4:'S0K89C', l40s:'S2L70C', h200nvl:'S3U30C', rtx6kb:null}[gid];
+  const cpu = pickT(HPE_CPU_XEON[o.train?'train':'serve'], (o.cores||64)/2);
+  const d = HPE_DIMM_DL.find(x=>16*x[0] >= (o.ram||0)) || HPE_DIMM_DL[HPE_DIMM_DL.length-1];
+  const need = Math.max(3.84, o.nvme||0), drv = need<=7.68 ? HPE_E3S_DL[0] : need<=30.72 ? HPE_E3S_DL[1] : HPE_E3S_DL[2];
+  const drvN = Math.max(2, ceil(need/drv[0]) + ceil(need/drv[0])%2);
+  X.add(sec, 'P76706-B21', 'HPE ProLiant Compute DL380a Gen12 8DW/16SW CTO Server (iLO 7)', nodes, `${per} GPU per server`);
+  X.add(sec, gpuPid, GPU_DESC[gid] + ' for HPE', nodes*per);
+  if(gid!=='l4') X.add(sec, 'P74700-B21', 'HPE DL380a Gen12 16-pin GPU cable kit (1 per 2 GPU DW)', nodes*per/2);
+  if(gid==='h200nvl') X.add(sec, per%4===0 ? 'S4A91C' : 'S4A90C', per%4===0 ? 'NVIDIA 4-way NVLink Bridge for H200 NVL' : 'NVIDIA 2-way NVLink Bridge for H200 NVL', per%4===0 ? nodes*per/4 : nodes*per/2);
+  X.add(sec, cpu[1], cpu[2], nodes*2, `${cpu[0]*2} core/server`);
+  X.add(sec, d[1], d[2], nodes*16, `${fmt(16*d[0])} GB/server`);
+  X.add(sec, 'P78279-B21', 'HPE NS204i-u v2 NVMe Hot Plug Boot Optimized Storage Device', nodes);
+  X.add(sec, 'P75284-B21', 'HPE DL380a Gen12 NS204i-u Front Cage Kit', nodes);
+  X.add(sec, drv[1], drv[2], nodes*drvN, `${fmt(drvN*drv[0],1)} TB data/server`);
+  nicLines(X, sec, nodes, o.ew ? Math.min(4, per/2) : 0, 1, 'HPE IB NDR/Ethernet 400Gb 1-port OSFP MCX75310AAS-NEAT (east-west)',
+    'HPE IB NDR200/Ethernet 200GbE 2-port QSFP112 MCX755106AC-HEAT (north-south)', 'HPE BlueField-3 B3220 DPU 2x200Gb QSFP112 (north-south)',
+    {ew:'P45641-B23', ns:'P65333-B21', dpu:'P66386-H21'});
+  if(X.nsSel==='dpu') X.add(sec, 'P74722-B21', 'HPE ProLiant Compute DL380a Gen12 DPU Enablement Kit', nodes);
+  X.add(sec, 'P10106-B21', 'Intel E810-XXVDA2 10/25Gb 2-port SFP28 OCP3 (manajemen)', nodes);
+  X.add(sec, 'P67248-B21', 'HPE 3200W M-CRPS Titanium Hot Plug Power Supply Kit', nodes*(per>4?8:5), per>4?'8 PSU untuk 8 GPU DW':'5 PSU untuk 2/4 GPU DW');
+  X.T.servers += nodes; X.T.dl = (X.T.dl||0) + nodes; X.T.gpus += nodes*per; X.T.nvGpus += nodes*per;
+  X.T.kw += nodes*(per*GPUS.find(g=>g.id===gid).tdp + 1300)/1000; X.T.ru += nodes*4;
+};
+function hpeXd(X, sec, n, o, kind){
+  const nodes = ceil(n/8);
+  const cfg = {
+    h200:{base:['S4Q28A','HPE ProLiant Compute XD685 air-cooled base (6U)'], acc:['S3P89A','NVIDIA HGX H200 141GB 8-GPU FIO Accelerator for HPE Cray XD'], kit:null, psu:6, ru:6, kw:10.5},
+    b200:{base:['S4R96A','HPE ProLiant Compute XD685 DLC base (5U)'], acc:['S3W20A','NVIDIA B200 192GB 8-GPU DLC FIO Accelerator for HPE ProLiant Compute XD'], kit:[null,'HPE XD685 B200 DLC Cooling Kit'], psu:12, ru:5, kw:12},
+    b300:{base:['S6Y07A','HPE ProLiant Compute XD685 B300 DLC High Power base (5U)'], acc:['S4W08A','NVIDIA HGX B300 288GB 8-GPU DLC FIO Accelerator for HPE ProLiant Compute XD'], kit:['S4X39A','HPE Cray XD685 B300 Direct Liquid Cooling Kit'], psu:12, ru:5, kw:14.5},
+    mi350x:{base:['S4R96A','HPE ProLiant Compute XD685 DLC base (5U)'], acc:['S6J64A','AMD Instinct MI355X 288GB 8-GPU DLC FIO Accelerator for HPE'], kit:['S6M06A','HPE ProLiant Compute XD685 MI355X Direct Liquid Cooling Kit'], psu:12, ru:5, kw:14},
+  }[kind];
+  const cpu = pickT(HPE_CPU_EPYC, Math.max(64, (o.cores||64)/2));
+  const d = HPE_DIMM_XD.find(x=>24*x[0] >= Math.max(2304, o.ram||0)) || HPE_DIMM_XD[HPE_DIMM_XD.length-1];
+  const need = Math.max(7.68, o.nvme||0), drv = need<=7.68 ? HPE_E3S_XD[0] : need<=30.72 ? HPE_E3S_XD[1] : HPE_E3S_XD[2];
+  const drvN = Math.min(8, Math.max(2, ceil(need/drv[0]) + ceil(need/drv[0])%2));
+  X.add(sec, cfg.base[0], cfg.base[1], nodes);
+  X.add(sec, cfg.acc[0], cfg.acc[1], nodes);
+  if(cfg.kit) X.add(sec, cfg.kit[0], cfg.kit[1], nodes);
+  X.add(sec, cpu[1], cpu[2], nodes*2);
+  X.add(sec, d[1], d[2], nodes*24, `${fmt(24*d[0])} GB/server`);
+  X.add(sec, 'S6A36A', 'HPE ProLiant Compute XD NS204i-u 2x 960GB Boot Device', nodes);
+  X.add(sec, drv[1], drv[2], nodes*drvN, `${fmt(drvN*drv[0],1)} TB data/server`);
+  if(o.ew){
+    if(kind==='b300'){ X.add(sec, null, 'Transceiver 800G OSFP (ConnectX-8 terintegrasi HGX B300)', nodes*8); X.T.ew800 += nodes*8; }
+    else { X.add(sec, 'P45641-H23', 'HPE IB NDR/Ethernet 400Gb 1-port OSFP MCX75310AAS-NEAT (east-west)', nodes*8); X.add(sec, null, 'Transceiver 400G (NIC east-west)', nodes*8); X.T.ew400 += nodes*8; }
+  }
+  nicLines(X, sec, nodes, 0, 2, null, 'HPE IB NDR200/Ethernet 200GbE 2-port QSFP112 MCX755106AC-HEAT (north-south)', 'HPE BlueField-3 B3220 DPU 2x200Gb QSFP112 (north-south)', {ns:'P65333-H21', dpu:'P66386-H21'});
+  X.add(sec, 'S4R02A', 'HPE ProLiant Compute XD 3000W 54VDC Power Supply', nodes*cfg.psu);
+  X.T.servers += nodes; X.T.xd = (X.T.xd||0) + nodes; X.T.gpus += nodes*8; if(kind!=='mi350x') X.T.nvGpus += nodes*8;
+  X.T.kw += nodes*cfg.kw; X.T.ru += nodes*cfg.ru;
+}
+HPE.platform.h200 = (X, s, g, n, o) => hpeXd(X, s, n, o, 'h200');
+HPE.platform.b200 = (X, s, g, n, o) => hpeXd(X, s, n, o, 'b200');
+HPE.platform.b300 = (X, s, g, n, o) => hpeXd(X, s, n, o, 'b300');
+HPE.platform.mi350x = (X, s, g, n, o) => hpeXd(X, s, n, o, 'mi350x');
+
+/* ---------- Supermicro ---------- */
+// Sumber: datasheet resmi Supermicro SYS-522GA-NRT, SYS-822GS-NB3RT, AS-8126GS-TNMR, AS-4125GS-TNRT;
+// adapter AOC-CX766003N-SQ0 / AOC-CX7AH0078-DTZ (katalog Supermicro). Dicek 27 Okt 2026.
+const SM_DDR5 = [[64,'64GB DDR5-6400 ECC RDIMM'],[96,'96GB DDR5-6400 ECC RDIMM'],[128,'128GB DDR5-6400 ECC RDIMM'],[256,'256GB DDR5-6400 ECC RDIMM']];
+const SM_U2 = [[3.84,'3.84TB NVMe Gen5 U.2'],[7.68,'7.68TB NVMe Gen5 U.2'],[15.36,'15.36TB NVMe Gen5 U.2']];
+const SM_E1S = [[3.84,'3.84TB NVMe Gen5 E1.S'],[7.68,'7.68TB NVMe Gen5 E1.S'],[15.36,'15.36TB NVMe Gen5 E1.S']];
+const SM_NIC = {ew:'AOC-CX766003N-SQ0', ns:'AOC-CX7AH0078-DTZ'};
+const SUPERMICRO = {
+  name:'Supermicro', short:'Supermicro', ph:'(Supermicro)',
+  ref:'datasheet resmi Supermicro SYS-522GA-NRT, AS-4125GS-TNRT, SYS-822GS-NB3RT, AS-8126GS-TNMR dan katalog adapter Supermicro, per 27 Okt 2026',
+  sub:{a100:'h200nvl', h100:'b300', h200:'b300', b200:'b300', mi300x:'mi350x'},
+  smallHgxToPcie:true,
+  platform:{},
+  net:{ be:['NVIDIA Spectrum-4 SN5600','NVIDIA Spectrum-4 SN5600 64x 800GbE OSFP (Spectrum-X)'],
+        fe:['NVIDIA Spectrum-3 SN4700','NVIDIA Spectrum-3 SN4700 32x 400GbE QSFP-DD'],
+        oob:[null,'Switch 1GbE 48 port untuk BMC/OOB (seri Supermicro SSE)'],
+        beOptic:[null,'Transceiver 800G OSFP 2xDR4 (switch backend)'], feOptic:[null,'Transceiver 400G QSFP-DD SR8 (switch frontend)'],
+        cable:[null,'Kabel fiber MPO-12 SMF'], beLic:[null,'Lisensi Cumulus Linux / Spectrum-X + support'] },
+  fabricMgr:[null,'NVIDIA NetQ / Supermicro SuperCloud Composer'],
+  mgmtCluster:[[null,'Server 1U single-socket Supermicro (control plane OpenShift)',3,'3 node HA']],
+  mgmtSw(X, sec, n){ X.add(sec, 'SFT-DCMS-SINGLE', 'Supermicro Server Manager / SuperCloud Composer node license', n, 'verifikasi SKU lisensi'); },
+  nvaie:[null], rh:[null],
+  services(X, sec, n){ X.add(sec, null, `Supermicro Onsite Service ${X.term} tahun (NBD / 4 jam)`, n); X.add(sec, null, 'Supermicro rack integration & burn-in (L11/L12)', 1); },
+  storage:[null,'Storage Supermicro + WEKA / VAST Data / DDN'],
+  rack:[null,'Rak 42U/48U Supermicro + PDU'],
+  extraNotes:['SKU sistem (SYS-/AS-) dan adapter (AOC-) memakai kode resmi Supermicro; part number komponen lain (CPU, DIMM, NVMe, GPU) dipilih saat konfigurasi oleh Supermicro atau partner.',
+    'SYS-822GS-NB3RT mewajibkan layanan onsite sesuai datasheet Supermicro.',
+    'Dukungan H200 NVL / L40S / L4 di AS-4125GS-TNRT perlu dikonfirmasi ke Supermicro.'],
+};
+SUPERMICRO.platform.l4 = SUPERMICRO.platform.l40s = SUPERMICRO.platform.h200nvl = SUPERMICRO.platform.rtx6kb = function(X, sec, gid, n, o){
+  const rtx = gid==='rtx6kb';
+  const {nodes, per} = packPcie(n, gid==='l4' ? 10 : 8);
+  const mem = pickDimm(SM_DDR5, 24, o.ram||0), drv = pickDrive(SM_U2, Math.max(3.84, o.nvme||0));
+  if(rtx){
+    X.add(sec, 'SYS-522GA-NRT', 'GPU SuperServer SYS-522GA-NRT 5U, 2S Intel Xeon 6900, hingga 8 GPU DW, 6x 2700W', nodes, `${per} GPU per server`);
+    X.add(sec, null, (o.cores||64)/2 > 72 ? 'Intel Xeon 6972P 96C' : 'Intel Xeon 6960P 72C', nodes*2);
+  } else {
+    X.add(sec, 'AS-4125GS-TNRT', 'A+ Server AS-4125GS-TNRT 4U, 2S AMD EPYC 9005, hingga 8 GPU DW', nodes, `${per} GPU per server`);
+    X.add(sec, null, pickBy(DELL_CPU_AMD[o.train?'train':'serve'], (o.cores||64)/2)[1], nodes*2);
+  }
+  X.add(sec, null, GPU_DESC[gid], nodes*per);
+  X.add(sec, null, mem.d[1], nodes*mem.n, `${fmt(mem.n*mem.d[0])} GB/server`);
+  X.add(sec, null, '2x 960GB M.2 NVMe (boot, RAID-1)', nodes);
+  X.add(sec, null, drv.d[1], nodes*drv.n, `${fmt(drv.n*drv.d[0],1)} TB data/server`);
+  nicLines(X, sec, nodes, o.ew ? Math.min(4, per/2) : 0, 1, 'NVIDIA ConnectX-7 1x400GbE OSFP MCX75310AAS-NEAT (east-west)',
+    'NVIDIA ConnectX-7 2x200GbE QSFP112 MCX755106AS-HEAT (north-south)', 'NVIDIA BlueField-3 B3220 DPU 2x200G (north-south)', SM_NIC);
+  X.T.servers += nodes; X.T.gpus += nodes*per; X.T.nvGpus += nodes*per; X.T.kw += nodes*(per*GPUS.find(g=>g.id===gid).tdp + 1500)/1000; X.T.ru += nodes*(rtx?5:4);
+};
+SUPERMICRO.platform.b300 = function(X, sec, gid, n, o){
+  const nodes = ceil(n/8);
+  const mem = pickDimm(SM_DDR5, 32, Math.max(2048, o.ram||0)), drv = pickDrive(SM_E1S, Math.max(7.68, o.nvme||0));
+  X.add(sec, 'SYS-822GS-NB3RT', 'GPU SuperServer SYS-822GS-NB3RT 8U, 2S Intel Xeon 6700, NVIDIA HGX B300 8-GPU (2.3TB HBM3e), 8x ConnectX-8 800G, 6x 6.6kW', nodes);
+  X.add(sec, null, 'Intel Xeon 6767P 64C', nodes*2);
+  X.add(sec, null, mem.d[1], nodes*mem.n, `${fmt(mem.n*mem.d[0])} GB/server`);
+  X.add(sec, null, '2x M.2 NVMe boot (RAID via S3808N)', nodes);
+  X.add(sec, null, drv.d[1], nodes*Math.min(8, drv.n), `${fmt(Math.min(8,drv.n)*drv.d[0],1)} TB data/server`);
+  if(o.ew){ X.add(sec, null, 'Transceiver 800G OSFP (ConnectX-8 east-west)', nodes*8); X.T.ew800 += nodes*8; }
+  nicLines(X, sec, nodes, 0, 2, null, 'NVIDIA ConnectX-7 2x200GbE QSFP112 MCX755106AS-HEAT (north-south)', 'NVIDIA BlueField-3 B3220 DPU 2x200G (north-south)', SM_NIC);
+  X.T.servers += nodes; X.T.gpus += nodes*8; X.T.nvGpus += nodes*8; X.T.kw += nodes*14.5; X.T.ru += nodes*8;
+};
+SUPERMICRO.platform.mi350x = function(X, sec, gid, n, o){
+  const nodes = ceil(n/8);
+  const mem = pickDimm(SM_DDR5, 24, Math.max(2304, o.ram||0)), drv = pickDrive(SM_U2, Math.max(7.68, o.nvme||0));
+  X.add(sec, 'AS-8126GS-TNMR', 'GPU A+ Server AS-8126GS-TNMR 8U, 2S AMD EPYC 9005, 8x AMD Instinct MI350X OAM', nodes);
+  X.add(sec, null, 'AMD EPYC 9575F 64C', nodes*2);
+  X.add(sec, null, mem.d[1], nodes*mem.n, `${fmt(mem.n*mem.d[0])} GB/server`);
+  X.add(sec, null, '2x 960GB M.2 NVMe (boot, RAID-1)', nodes);
+  X.add(sec, null, drv.d[1], nodes*drv.n, `${fmt(drv.n*drv.d[0],1)} TB data/server`);
+  nicLines(X, sec, nodes, o.ew ? 8 : 0, 2, 'NVIDIA ConnectX-7 1x400GbE OSFP MCX75310AAS-NEAT (east-west)',
+    'NVIDIA ConnectX-7 2x200GbE QSFP112 MCX755106AS-HEAT (north-south)', 'NVIDIA BlueField-3 B3220 DPU 2x200G (north-south)', SM_NIC);
+  X.T.servers += nodes; X.T.gpus += nodes*8; X.T.kw += nodes*13; X.T.ru += nodes*8;
+};
+
+const VENDORS = {
+  cisco:      {name:'Cisco AI POD',                    build: buildBoQCisco},
+  dell:       {name:'Dell AI Factory',                 build: R => buildBoQGeneric(R, DELL)},
+  hpe:        {name:'HPE Private Cloud AI / ProLiant', build: R => buildBoQGeneric(R, HPE)},
+  supermicro: {name:'Supermicro',                      build: R => buildBoQGeneric(R, SUPERMICRO)},
+};
+let BQ_VENDOR = 'cisco';
+try{ const v = localStorage.getItem('bqVendor'); if(v && v in VENDORS) BQ_VENDOR = v; }catch(e){}
+function setVendor(v){ if(!(v in VENDORS)) return; BQ_VENDOR = v; try{ localStorage.setItem('bqVendor', v); }catch(e){} update(); const el = $('bqVendorSel'); if(el) el.focus(); }
+function buildBoQ(R){ const v = VENDORS[BQ_VENDOR]; return v ? v.build(R) : null; }
 
 /* ===================== RENDER ===================== */
 function kv(rows){ return `<div class="tbl"><table><tbody>${rows.map(r=>`<tr><td class="k">${esc(r[0])}</td><td class="v">${esc(String(r[1]))}</td></tr>`).join('')}</tbody></table></div>`; }
@@ -1008,8 +1387,11 @@ function boqHtml(B){
     return head + `<tr><td class="n">${++no}</td><td class="pid">${pid}</td><td>${esc(l.desc)}</td><td class="n">${fmt(l.qty)}</td><td class="muted">${esc(l.note)}</td></tr>`;
   }).join('');
   const t = B.T;
-  return `<section class="card" id="boq"><h2>BoQ ${esc(B.vendor)}</h2>
-    <p class="desc">Hasil sizing dipetakan ke platform ${esc(B.vendor)} yang paling mendekati. ${t.servers} server GPU, ${t.gpus} GPU, ${t.switches} switch, ${t.racks} rak.</p>
+  const opts = Object.entries(VENDORS).map(([k,v])=>`<option value="${k}"${k===BQ_VENDOR?' selected':''}>${esc(v.name)}</option>`).join('');
+  return `<section class="card" id="boq">
+    <div class="bqhead"><h2>Bill of Quantity</h2>
+      <div class="bqpick"><label for="bqVendorSel">Brand</label><select id="bqVendorSel">${opts}</select></div></div>
+    <p class="desc">Hasil sizing dipetakan ke platform ${esc(B.vendor)} yang paling mendekati. ${t.servers} server GPU, ${t.gpus} GPU, ${t.switches} switch, ${t.racks} rak. Referensi: ${esc(B.ref)}.</p>
     ${B.subs.length ? `<div class="pills" style="margin:0 0 12px">${B.subs.map(s=>`<span class="pill warn">${esc(s)}</span>`).join('')}</div>` : ''}
     <div class="tbl"><table class="bq"><thead><tr><th class="n">No</th><th>SKU / PID</th><th>Deskripsi</th><th class="n">Qty</th><th>Catatan</th></tr></thead><tbody>${rows}</tbody></table></div>
     <ul class="notes" style="margin-top:12px">${B.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`;
@@ -1225,6 +1607,7 @@ function init(){
   ['inTok','outTok','tps','ttft'].forEach(id=>$(id).addEventListener('input',()=>{$('usecase').value='custom';}));
   $('form').addEventListener('input', update);
   $('form').addEventListener('change', update);
+  $('results').addEventListener('change', e=>{ if(e.target.id==='bqVendorSel') setVendor(e.target.value); });
   $('btnXlsx').addEventListener('click', exportXlsx);
   $('btnPdf').addEventListener('click', exportPdf);
   update();
@@ -1264,7 +1647,7 @@ function exportXlsx(){
 
   if(R.boq && R.boq.lines.length){
     const B = R.boq;
-    const bq = [[`BILL OF QUANTITY – ${B.vendor.toUpperCase()}`],['Customer', $('custName').value],['Tanggal', stamp()],['Referensi SKU', `Dokumen resmi Cisco per ${CISCO.refDate}`],[]];
+    const bq = [[`BILL OF QUANTITY – ${B.vendor.toUpperCase()}`],['Customer', $('custName').value],['Tanggal', stamp()],['Referensi SKU', B.ref],[]];
     if(B.subs.length){ bq.push(['Substitusi GPU']); B.subs.forEach(s=>bq.push(['', s])); bq.push([]); }
     bq.push(['No','Bagian','SKU / PID','Deskripsi','Qty','Catatan']);
     B.lines.forEach((l,i)=>bq.push([i+1, l.sec, l.pid, l.desc, l.qty, l.note]));
@@ -1331,8 +1714,9 @@ function exportPdf(){
     doc.addPage(); doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(...ink);
     doc.text(pdfSafe(`Bill of Quantity - ${B.vendor}`), M, 44);
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...grey);
-    doc.text(pdfSafe(`Referensi SKU: dokumen resmi Cisco per ${CISCO.refDate}. ${B.T.servers} server GPU, ${B.T.gpus} GPU, ${B.T.switches} switch, ${B.T.racks} rak.`), M, 60);
-    let y0 = 72;
+    const refL = doc.splitTextToSize(pdfSafe(`Referensi SKU: ${B.ref}. ${B.T.servers} server GPU, ${B.T.gpus} GPU, ${B.T.switches} switch, ${B.T.racks} rak.`), W-2*M);
+    doc.text(refL, M, 60);
+    let y0 = 60 + refL.length*11 + 2;
     if(B.subs.length){ const s = doc.splitTextToSize(pdfSafe('Substitusi GPU: '+B.subs.join('; ')), W-2*M); doc.text(s, M, y0); y0 += s.length*11; }
     const body = []; let sec = '';
     B.lines.forEach((l,i)=>{ if(l.sec!==sec){ sec=l.sec; body.push([{content:pdfSafe(sec), colSpan:5, styles:{fillColor:[233,237,241], fontStyle:'bold', textColor:ink}}]); } body.push([i+1, pdfSafe(l.pid), pdfSafe(l.desc), l.qty, pdfSafe(l.note)]); });

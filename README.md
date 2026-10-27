@@ -4,11 +4,20 @@ Kalkulator sizing server AI on-premise untuk inference, RAG, fine-tuning, dan pr
 Hasilnya berupa spesifikasi GPU, node, CPU, RAM, storage, jaringan, daya, ruang rak, dan estimasi CAPEX,
 yang bisa diexport ke Excel dan PDF.
 
-Hasil sizing juga diubah menjadi **Bill of Quantity (BoQ) Cisco AI POD** lengkap dengan SKU/PID:
-server UCS C845A M8 / C880A M8 (HGX B300) / C885A M8 (MI350X), CPU, memori, GPU, drive, NIC, optik,
-switch Nexus (frontend, backend Scale Unit, OOB), Nexus Dashboard, Intersight, NVIDIA AI Enterprise,
-Red Hat OpenShift, layanan, dan rak. Referensi SKU: dokumen resmi Cisco per 27 Okt 2026.
-Struktur `VENDORS` di `index.html` disiapkan untuk menambah Dell, HPE, dan Supermicro.
+Hasil sizing juga diubah menjadi **Bill of Quantity (BoQ)** lengkap dengan SKU, dengan brand yang dipilih
+lewat dropdown di bagian BoQ:
+
+| Brand | Platform | Sumber SKU |
+|---|---|---|
+| Cisco AI POD | UCS C845A M8 (PCIe), C880A M8 (HGX B300), C885A M8 (MI350X), Nexus 9300/9364E-SG2 | Spec sheet & AI POD Ordering Guide (Okt 2026) |
+| Dell AI Factory | PowerEdge XE7745 (PCIe), XE9780 (HGX B200/B300), XE9785 (MI355X), PowerSwitch Z9864F/Z9432F | Spesifikasi dell.com; kode pesanan dari konfigurator Dell |
+| HPE | ProLiant Compute DL380a Gen12 (PCIe), XD685 (H200/B200/B300/MI355X), Juniper QFX5240/QFX5130 | HPE QuickSpecs (part number lengkap) |
+| Supermicro | SYS-522GA-NRT / AS-4125GS-TNRT (PCIe), SYS-822GS-NB3RT (HGX B300), AS-8126GS-TNMR (MI350X), NVIDIA Spectrum | Datasheet Supermicro |
+
+BoQ mencakup server, CPU, memori, GPU, drive, NIC, optik, switch frontend/backend/OOB, manajemen,
+NVIDIA AI Enterprise, Red Hat OpenShift, layanan/support, storage bersama, dan rak. Item yang part number-nya
+hanya keluar dari konfigurator vendor ditandai dengan placeholder, mis. `(Dell Sales Tool)` atau `(konfigurator HPE)`.
+Brand baru ditambahkan lewat objek `VENDORS` di `index.html`.
 
 **Aplikasi live:** https://fadliramm.github.io/AI-Infrastructure-Calculator/
 
