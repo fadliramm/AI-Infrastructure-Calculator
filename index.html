@@ -122,6 +122,71 @@ table.bq td{font-size:12.5px}
 table.bq td.pid{white-space:nowrap}
 tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg)}
 .muted{color:var(--muted)}
+
+/* Dashboard ringkasan eksekutif: panel gelap tetap (satu tampilan di kedua tema) untuk presentasi high-level */
+.dash{
+  --dash-bg:#0c2826; --dash-bg2:#0f3532; --dash-fg:#ecf6f4; --dash-muted:#9dc3bd; --dash-line:rgba(236,246,244,.12); --dash-tile:rgba(236,246,244,.05);
+  --d1:#4fd1c5; --d2:#f2c14e; --d3:#f08a6b; --ok:#7ee0a1; --no:#ff9f8f;
+  background:radial-gradient(120% 140% at 100% 0%, var(--dash-bg2) 0%, var(--dash-bg) 55%); color:var(--dash-fg);
+  border-radius:16px; padding:clamp(18px,3vw,32px); display:flex; flex-direction:column; gap:20px; color-scheme:dark;
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 12px 32px rgba(6,24,23,.18);
+}
+.dash:fullscreen{border-radius:0; overflow:auto; padding:clamp(24px,4vw,56px); justify-content:center}
+.dhead{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px 24px}
+.deyebrow{font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--d1)}
+.dtitle{font-family:var(--f-display); font-weight:800; font-size:clamp(22px,3vw,34px); letter-spacing:-.015em; margin:6px 0 2px; text-wrap:balance}
+.dsub{color:var(--dash-muted); font-size:13.5px}
+.dactions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+.dchip{font-size:12px; font-weight:700; padding:5px 11px; border-radius:99px; border:1px solid currentColor}
+.dchip.ok{color:var(--ok)} .dchip.no{color:var(--no)}
+.dbtn{background:var(--dash-tile); color:var(--dash-fg); border:1px solid var(--dash-line); border-radius:8px; padding:7px 12px; font-weight:600; font-size:12.5px}
+.dbtn:hover{border-color:var(--d1)} .dbtn:focus-visible{outline:2px solid var(--d1); outline-offset:2px}
+.dstory{margin:0; font-size:clamp(15px,1.7vw,19px); line-height:1.5; max-width:62ch; color:var(--dash-fg)}
+.dstory b{color:var(--d1); font-weight:700}
+.dkpis{display:grid; grid-template-columns:1.6fr repeat(3,1fr); gap:12px}
+@media (max-width:760px){.dkpis{grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px} .dk.wide{grid-column:1/-1} .dk{padding:12px} .dk b{font-size:20px}}
+.dk{background:var(--dash-tile); border:1px solid var(--dash-line); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:2px; min-width:0}
+.dk span{font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--dash-muted); font-weight:600}
+.dk b{font-family:var(--f-mono); font-weight:600; font-size:clamp(22px,2.6vw,30px); font-variant-numeric:tabular-nums; line-height:1.2; overflow-wrap:anywhere}
+.dk b small{font-size:.5em; color:var(--dash-muted)}
+.dk i{font-style:normal; font-size:12px; color:var(--dash-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+.dk.wide b{color:var(--d2)}
+.dgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px}
+.dcard{background:var(--dash-tile); border:1px solid var(--dash-line); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0}
+.dcard h3{margin:0; font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--dash-muted); font-weight:700}
+.gauge{width:100%; max-width:240px; align-self:center}
+.gauge path{fill:none; stroke-width:14; stroke-linecap:round}
+.g-bg{stroke:var(--dash-line)} .g-val{stroke:var(--d1)}
+.g-tgt{stroke:var(--d2); stroke-width:3; stroke-linecap:round}
+#dashWrap{margin-top:20px}
+#dashWrap:empty{display:none}
+.g-num{fill:var(--dash-fg); font:600 26px var(--f-mono); text-anchor:middle}
+.g-sub{fill:var(--dash-muted); font:500 9.5px var(--f-body); text-anchor:middle}
+.dstats{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+.dstats div{display:flex; flex-direction:column; gap:1px; border-top:1px solid var(--dash-line); padding-top:8px; min-width:0}
+.dstats span{font-size:11px; color:var(--dash-muted); text-transform:uppercase; letter-spacing:.06em}
+.dstats b{font-family:var(--f-mono); font-size:15px; font-weight:600}
+.dstats i{font-style:normal; font-size:11.5px; color:var(--dash-muted)}
+.dstats i.ok{color:var(--ok)} .dstats i.no{color:var(--no)}
+.dcost{position:relative; width:170px; max-width:100%; align-self:center}
+.donut{width:100%; display:block}
+.d-bg{fill:none; stroke:var(--dash-line); stroke-width:14}
+.d-seg{fill:none; stroke-width:14}
+.dcost-mid{position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center}
+.dcost-mid b{font-family:var(--f-mono); font-size:15px; font-weight:600}
+.dcost-mid span{font-size:11px; color:var(--dash-muted)}
+.dleg{list-style:none; margin:0; padding:0; display:grid; gap:6px}
+.dleg li{display:grid; grid-template-columns:12px 1fr auto; align-items:center; gap:8px; font-size:13px}
+.dleg i{width:10px; height:10px; border-radius:3px; display:block}
+.dleg b{font-family:var(--f-mono); font-weight:600}
+.dinfra{display:grid; grid-template-columns:1fr 1fr; gap:10px 14px}
+.dinfra div{display:flex; flex-direction:column; border-top:1px solid var(--dash-line); padding-top:8px; min-width:0}
+.dinfra span{font-size:11px; color:var(--dash-muted); text-transform:uppercase; letter-spacing:.06em}
+.dinfra b{font-family:var(--f-mono); font-size:19px; font-weight:600; font-variant-numeric:tabular-nums}
+.dinfra b small{font-size:.6em; color:var(--dash-muted)}
+.dfoot{display:flex; flex-wrap:wrap; justify-content:space-between; gap:6px 20px; font-size:12px; color:var(--dash-muted); border-top:1px solid var(--dash-line); padding-top:12px}
+.dfoot span:first-child{max-width:70ch}
+@media (prefers-reduced-motion:no-preference){ .g-val,.d-seg{transition:stroke-dasharray .6s ease} }
 .foot{margin-top:28px;padding-top:14px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 16px}
 .foot a{color:var(--accent);font-weight:600}
 @media (prefers-reduced-motion:no-preference){.kpi .v,.headline{transition:color .2s}}
@@ -286,6 +351,7 @@ tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-tr
     <!-- OUTPUT -->
     <main class="results" id="results" aria-live="polite"></main>
   </div>
+  <div id="dashWrap"></div>
   <footer class="foot">
     <span>Versi utama: <a href="https://fadliramm.github.io/AI-Infrastructure-Calculator/" target="_blank" rel="noopener">fadliramm.github.io/AI-Infrastructure-Calculator</a></span>
     <span>Kode sumber: <a href="https://github.com/fadliramm/AI-Infrastructure-Calculator" target="_blank" rel="noopener">github.com/fadliramm/AI-Infrastructure-Calculator</a></span>
@@ -502,7 +568,8 @@ function buildCluster(role, gpu, gpusNeeded, kind, extra){
   const nodeBase = gpu.form==='PCIe' ? 28000 : (perNode<=4? 45000 : 75000);
   const netCost = nodes>1 ? nodes*(train?35000:8000) : 0;
   const cost = installed*gpu.price + nodes*nodeBase + netCost;
-  return {role, gpu, gpusNeeded, perNode, nodes, installed, cores, ram, nvme, drives, fabric, net, nodeW, totalKW, ru: ru*nodes, cost};
+  return {role, gpu, gpusNeeded, perNode, nodes, installed, cores, ram, nvme, drives, fabric, net, nodeW, totalKW, ru: ru*nodes, cost,
+    costParts: {gpu: installed*gpu.price, server: nodes*nodeBase, net: netCost}};
 }
 
 function ragServer(m, p, concurrent){
@@ -521,7 +588,7 @@ function ragServer(m, p, concurrent){
   const storTB = Math.max(3.84, (rawGB*2 + (vecGB+textGB)*3)/1000*1.3);
   return {e, corpusTok, chunks, vecGB, textGB, rawGB, embTokS, ingestH: corpusTok/(embTokS*embGpus)/3600, embGpus, ram,
     stor: roundUpTo(storTB,[3.84,7.68,15.36,30.72,61.44,122.88,245.76]), cores: concurrent>500?64:32,
-    cost: embGpus*l40s.price + 22000, kw: (embGpus*l40s.tdp + 900)*1.1/1000};
+    cost: embGpus*l40s.price + 22000, costParts: {gpu: embGpus*l40s.price, server: 22000, net: 0}, kw: (embGpus*l40s.tdp + 900)*1.1/1000};
 }
 
 /* ===================== HITUNG SEMUA ===================== */
@@ -1397,6 +1464,93 @@ function boqHtml(B){
     <ul class="notes" style="margin-top:12px">${B.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`;
 }
 
+/* ===================== DASHBOARD RINGKASAN EKSEKUTIF ===================== */
+function costBreakdown(c){
+  const parts = {gpu:0, server:0, net:0};
+  for(const k of c.clusters) for(const key in parts) parts[key] += k.costParts?.[key]||0;
+  if(c.rag) for(const key in parts) parts[key] += c.rag.costParts?.[key]||0;
+  return parts;
+}
+function gaugeSvg(pct, label, sub, tgt){
+  const v = Math.max(0, Math.min(100, pct));
+  return `<svg class="gauge" viewBox="0 0 200 118" role="img" aria-label="${esc(label)} ${esc(sub)}">
+    <path d="M20 100 A80 80 0 0 1 180 100" pathLength="100" class="g-bg"/>
+    <path d="M20 100 A80 80 0 0 1 180 100" pathLength="100" class="g-val" style="stroke-dasharray:${v} 100"/>
+    ${tgt!=null ? `<line x1="${100+92*Math.cos(Math.PI*(1-tgt/100))}" y1="${100-92*Math.sin(Math.PI*(1-tgt/100))}" x2="${100+68*Math.cos(Math.PI*(1-tgt/100))}" y2="${100-68*Math.sin(Math.PI*(1-tgt/100))}" class="g-tgt"/>` : ''}
+    <text x="100" y="84" class="g-num">${esc(label)}</text>
+    <text x="100" y="106" class="g-sub">${esc(sub)}</text>
+  </svg>`;
+}
+function donutSvg(segs){
+  const tot = segs.reduce((s,x)=>s+x.v,0) || 1;
+  let off = 0;
+  const arcs = segs.map(x=>{ const p = x.v/tot*100; const a = `<circle cx="60" cy="60" r="44" pathLength="100" class="d-seg" style="stroke:${x.c};stroke-dasharray:${Math.max(0,p-0.6)} ${100-Math.max(0,p-0.6)};stroke-dashoffset:${-off}"/>`; off += p; return a; }).join('');
+  return `<svg class="donut" viewBox="0 0 120 120" role="img" aria-label="Komposisi biaya"><g transform="rotate(-90 60 60)"><circle cx="60" cy="60" r="44" class="d-bg"/>${arcs}</g></svg>`;
+}
+function dashHtml(R){
+  const c = R.chosen, p = R.I.p, B = R.boq, m = R.I.m;
+  const parts = costBreakdown(c), totalCost = parts.gpu + parts.server + parts.net;
+  const servers = B?.T.servers || R.kpi.nodes, racks = B?.T.racks || ceil(R.kpi.ru/40), switches = B?.T.switches || 0;
+  const mainSrv = B?.lines.find(l=>l.sec.startsWith('Compute'));
+  const brand = B?.vendor || '—';
+
+  // Kalimat utama
+  let story;
+  if(c.inf && !c.ft && !c.tr) story = `<b>${R.kpi.gpus} GPU</b> di <b>${R.kpi.nodes} server</b> melayani <b>${fmt(p.users)} pengguna</b> (${fmt(p.conc)} sesi bersamaan) dengan kecepatan ±${fmt(c.inf.tps,0)} token/detik per pengguna.`;
+  else if(c.ft) story = `Fine-tuning <b>${esc(m.name)}</b> selesai ±<b>${fmt(c.ft.hours,1)} jam</b> memakai <b>${c.ft.gpus} GPU</b>${c.inf?`, lalu dilayani ${c.inf.gpus} GPU untuk ${fmt(p.users)} pengguna`:''}.`;
+  else if(c.tr) story = `Pre-training <b>${esc(m.name)}</b> dengan ${fmt(p.tokensB)} miliar token selesai ±<b>${fmt(c.tr.days,1)} hari</b> memakai <b>${c.tr.gpus} GPU</b>.`;
+  else story = `${R.kpi.gpus} GPU di ${R.kpi.nodes} server.`;
+
+  // Kartu kinerja
+  let perf;
+  if(c.inf){
+    const ratio = c.inf.tps/p.tps;
+    perf = `${gaugeSvg(ratio/2*100, fmt(c.inf.tps,0), `token/dtk per user · target ${p.tps}`, 50)}
+      <div class="dstats"><div><span>TTFT</span><b>${fmt(c.inf.ttft,2)} dtk</b><i class="${c.inf.ttftOk?'ok':'no'}">${c.inf.ttftOk?'sesuai target':'di atas target'}</i></div>
+      <div><span>Kapasitas</span><b>${fmt(c.inf.reqPerMin)} req/mnt</b><i>${fmt(c.inf.aggTps)} token/dtk total</i></div></div>`;
+  } else {
+    const act = c.ft ? c.ft.hours : c.tr.days, tgt = c.ft ? p.hours : p.days, unit = c.ft ? 'jam' : 'hari';
+    perf = `${gaugeSvg(Math.min(100, act/tgt*100), fmt(act,1)+' '+unit, `estimasi durasi · target ${tgt} ${unit}`, 100)}
+      <div class="dstats"><div><span>Komputasi</span><b>${c.ft ? fmt(c.ft.flopsTotal/1e18,1)+' EFLOP' : fmt(c.tr.flopsTotal/1e21,2)+' ZFLOP'}</b><i>${c.ft ? fmt(c.ft.tokens/1e6,0)+' juta token' : fmt(p.tokensB)+' miliar token'}</i></div>
+      <div><span>GPU-jam</span><b>${fmt((c.ft?c.ft.gpus*c.ft.hours:c.tr.gpus*c.tr.days*24))}</b><i>${R.kpi.gpus} GPU terpasang</i></div></div>`;
+  }
+
+  // Komposisi biaya
+  const segs = [{k:'GPU', v:parts.gpu, c:'var(--d1)'},{k:'Server & platform', v:parts.server, c:'var(--d2)'},{k:'Jaringan', v:parts.net, c:'var(--d3)'}].filter(s=>s.v>0);
+  const cost = `<div class="dcost">${donutSvg(segs)}<div class="dcost-mid"><b>${usd(totalCost)}</b><span>${idr(totalCost*p.fx)}</span></div></div>
+    <ul class="dleg">${segs.map(s=>`<li><i style="background:${s.c}"></i><span>${s.k}</span><b>${fmt(s.v/totalCost*100,0)}%</b></li>`).join('')}</ul>`;
+
+  // Kapasitas & infrastruktur
+  const infra = [
+    ['Server GPU', servers, 'unit'], ['Switch', switches, 'unit'], ['Rak 42U', racks, 'unit'],
+    ['Daya IT', fmt(R.kpi.kw,1), 'kW'], ['Pendinginan', fmt(R.kpi.kw*3412/12000,1), 'TR'], ['VRAM total', fmtGB(R.kpi.vram), ''],
+  ];
+
+  const statusOk = c.ok;
+  return `<section class="dash" id="dash" aria-label="Dashboard ringkasan eksekutif">
+    <div class="dhead">
+      <div><div class="deyebrow">Ringkasan eksekutif · ${new Date().toLocaleDateString('id-ID',{day:'numeric',month:'long',year:'numeric'})}</div>
+        <h2 class="dtitle">${esc($('custName').value || 'Customer')}</h2>
+        <div class="dsub">${esc(R.modeName)} · ${esc(m.name)} · BoQ ${esc(brand)}</div></div>
+      <div class="dactions"><span class="dchip ${statusOk?'ok':'no'}">${statusOk?'Target terpenuhi':'Target belum terpenuhi'}</span>
+        <button type="button" class="dbtn" id="dashFs">Layar penuh</button></div>
+    </div>
+    <p class="dstory">${story}</p>
+    <div class="dkpis">
+      <div class="dk wide"><span>Estimasi CAPEX</span><b>${usd(R.kpi.cost)}</b><i>${idr(R.kpi.cost*p.fx)}</i></div>
+      <div class="dk"><span>GPU</span><b>${R.kpi.gpus}</b><i>${esc(c.gpu.name.replace(/^NVIDIA |^AMD Instinct /,''))}</i></div>
+      <div class="dk"><span>Server</span><b>${servers}</b><i>${mainSrv ? esc(mainSrv.pid.startsWith('(')?mainSrv.desc.split(',')[0]:mainSrv.pid) : ''}</i></div>
+      <div class="dk"><span>Daya IT</span><b>${fmt(R.kpi.kw,1)}<small> kW</small></b><i>${racks} rak · batas ${num('bqRackKW')||20} kW/rak</i></div>
+    </div>
+    <div class="dgrid">
+      <div class="dcard"><h3>Kinerja</h3>${perf}</div>
+      <div class="dcard"><h3>Komposisi biaya</h3>${cost}</div>
+      <div class="dcard"><h3>Infrastruktur</h3><div class="dinfra">${infra.map(x=>`<div><span>${x[0]}</span><b>${x[1]}<small>${x[2]?' '+x[2]:''}</small></b></div>`).join('')}</div></div>
+    </div>
+    <div class="dfoot"><span>Platform: ${mainSrv ? esc(mainSrv.desc) : esc(R.headline)}</span><span>Estimasi indikatif. Validasi harga dan konfigurasi dengan ${esc(brand)}.</span></div>
+  </section>`;
+}
+
 let LAST;
 function render(){
   const R = buildReport(); LAST = R;
@@ -1451,6 +1605,7 @@ function render(){
     <section class="card"><h2>Software stack yang disarankan</h2><div class="sw">${R.stack.map(s=>`<div><b>${esc(s[0])}</b>${esc(s[1])}</div>`).join('')}</div></section>
 
     <section class="card"><h2>Asumsi &amp; catatan</h2><ul class="notes">${R.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`;
+  $('dashWrap').innerHTML = dashHtml(R);
 }
 
 /* ===================== LINK HUGGING FACE → PARAMETER ===================== */
@@ -1608,11 +1763,20 @@ function init(){
   $('form').addEventListener('input', update);
   $('form').addEventListener('change', update);
   $('results').addEventListener('change', e=>{ if(e.target.id==='bqVendorSel') setVendor(e.target.value); });
+  $('dashWrap').addEventListener('click', e=>{
+    if(!e.target.closest('#dashFs')) return;
+    const el = $('dash');
+    if(document.fullscreenElement){ document.exitFullscreen?.(); return; }
+    const req = el.requestFullscreen?.();
+    if(req && req.catch) req.catch(()=>{ el.scrollIntoView({behavior:'smooth'}); setStatus('Layar penuh tidak tersedia di tampilan ini.'); });
+    else if(!req){ el.scrollIntoView({behavior:'smooth'}); setStatus('Layar penuh tidak tersedia di tampilan ini.'); }
+  });
+  document.addEventListener('fullscreenchange', ()=>{ const b = $('dashFs'); if(b) b.textContent = document.fullscreenElement ? 'Keluar layar penuh' : 'Layar penuh'; });
   $('btnXlsx').addEventListener('click', exportXlsx);
   $('btnPdf').addEventListener('click', exportPdf);
   update();
 }
-function update(){ applyMode(); try{ render(); }catch(e){ $('results').innerHTML = `<div class="card"><h2>Input belum valid</h2><p class="desc">${esc(e.message)}</p></div>`; console.error(e); } }
+function update(){ applyMode(); try{ render(); }catch(e){ $('results').innerHTML = `<div class="card"><h2>Input belum valid</h2><p class="desc">${esc(e.message)}</p></div>`; $('dashWrap').innerHTML = ''; console.error(e); } }
 
 /* ===================== EXPORT ===================== */
 const stamp = () => new Date().toISOString().slice(0,10);
@@ -1703,6 +1867,18 @@ function exportPdf(){
       headStyles:{fillColor:[233,237,241],textColor:ink,fontStyle:'bold'}, columnStyles:{0:{cellWidth:180,textColor:grey}},
       head:[[pdfSafe(title),'']], body:rows.map(r=>[pdfSafe(r[0]), pdfSafe(r[1])])});
   };
+  {
+    const c = R.chosen, parts = costBreakdown(c), tot = parts.gpu + parts.server + parts.net || 1;
+    const ex = [];
+    if(c.inf) ex.push(['Kinerja', `${fmt(c.inf.tps,0)} token/dtk per pengguna (target ${p.tps}), TTFT ${fmt(c.inf.ttft,2)} dtk, ${fmt(c.inf.reqPerMin)} request/menit`],
+                      ['Beban', `${fmt(p.users)} pengguna, ${fmt(p.conc)} sesi bersamaan`]);
+    if(c.ft) ex.push(['Fine-tuning', `selesai ±${fmt(c.ft.hours,1)} jam (target ${p.hours} jam) di ${c.ft.gpus} GPU`]);
+    if(c.tr) ex.push(['Pre-training', `selesai ±${fmt(c.tr.days,1)} hari (target ${p.days} hari) di ${c.tr.gpus} GPU`]);
+    ex.push(['Komposisi biaya', `GPU ${fmt(parts.gpu/tot*100,0)}% · server & platform ${fmt(parts.server/tot*100,0)}% · jaringan ${fmt(parts.net/tot*100,0)}%`]);
+    if(R.boq) ex.push(['BoQ', `${R.boq.vendor}: ${R.boq.T.servers} server GPU, ${R.boq.T.switches} switch, ${R.boq.T.racks} rak`]);
+    ex.push(['Status', c.ok ? 'Target terpenuhi' : 'Target belum terpenuhi: '+c.issues.join(' ')]);
+    sect('Ringkasan eksekutif', ex);
+  }
   R.bom.forEach(b=>sect(b.title, b.rows));
   R.sections.forEach(s=>sect(s.title, s.rows));
   doc.autoTable({startY:doc.lastAutoTable.finalY+16, margin:{left:M,right:M}, theme:'grid', styles:{fontSize:8.5,cellPadding:4},
