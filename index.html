@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Kalkulator Sizing Server AI</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&family=Roboto+Slab:wght@500;600&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
@@ -123,34 +123,45 @@ table.bq td.pid{white-space:nowrap}
 tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-transform:uppercase;letter-spacing:.06em;color:var(--fg)}
 .muted{color:var(--muted)}
 
-/* Dashboard ringkasan eksekutif: panel gelap tetap (satu tampilan di kedua tema) untuk presentasi high-level */
+/* Dashboard ringkasan eksekutif: panel biru tua → biru terang dengan aksen merah (gaya deck presentasi),
+   satu tampilan tetap di kedua tema untuk presentasi high-level */
 .dash{
-  --dash-bg:#0c2826; --dash-bg2:#0f3532; --dash-fg:#ecf6f4; --dash-muted:#9dc3bd; --dash-line:rgba(236,246,244,.12); --dash-tile:rgba(236,246,244,.05);
-  --d1:#4fd1c5; --d2:#f2c14e; --d3:#f08a6b; --ok:#7ee0a1; --no:#ff9f8f;
-  background:radial-gradient(120% 140% at 100% 0%, var(--dash-bg2) 0%, var(--dash-bg) 55%); color:var(--dash-fg);
+  --dash-bg:#0a1c86; --dash-bg2:#1238c9; --dash-bg3:#2350ff; --dash-fg:#ffffff; --dash-muted:#bccaff; --dash-line:rgba(255,255,255,.16); --dash-tile:rgba(255,255,255,.07);
+  --red:#ff1f1f; --blue:#2b5bff;
+  --d1:#ff2d2d; --d2:#ffffff; --d3:#8eaaff; --ok:#8ff0b4; --no:#ffb3ad;
+  --f-slab:"Roboto Slab","Rockwell",Georgia,serif;
+  position:relative; overflow:hidden; isolation:isolate;
+  background:linear-gradient(100deg, var(--dash-bg) 0%, var(--dash-bg2) 62%, var(--dash-bg3) 100%); color:var(--dash-fg);
   border-radius:16px; padding:clamp(18px,3vw,32px); display:flex; flex-direction:column; gap:20px; color-scheme:dark;
-  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 12px 32px rgba(6,24,23,.18);
+  box-shadow:0 12px 32px rgba(10,28,134,.25);
 }
+/* cincin konsentris merah, seperti motif pada deck */
+.dash::before{content:""; position:absolute; z-index:-1; pointer-events:none; width:min(620px,90vw); aspect-ratio:1; right:-180px; top:-120px;
+  background:repeating-radial-gradient(circle, rgba(255,40,40,.42) 0 1px, transparent 1.6px 11px);
+  -webkit-mask:radial-gradient(circle, #000 0 38%, transparent 68%); mask:radial-gradient(circle, #000 0 38%, transparent 68%); opacity:.6}
 .dash:fullscreen{border-radius:0; overflow:auto; padding:clamp(24px,4vw,56px); justify-content:center}
 .dhead{display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:12px 24px}
-.deyebrow{font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--d1)}
-.dtitle{font-family:var(--f-display); font-weight:800; font-size:clamp(22px,3vw,34px); letter-spacing:-.015em; margin:6px 0 2px; text-wrap:balance}
-.dsub{color:var(--dash-muted); font-size:13.5px}
+.deyebrow{font-size:11.5px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; color:var(--dash-muted); margin-bottom:16px}
+.dtitle{font-family:var(--f-slab); font-weight:500; font-size:clamp(24px,3.2vw,40px); letter-spacing:-.005em; line-height:1.15; margin:10px 0 8px;
+  display:inline; background:var(--red); color:#fff; padding:.08em .28em; -webkit-box-decoration-break:clone; box-decoration-break:clone}
+.dsub{display:table; margin-top:12px; background:var(--blue); color:#fff; font-family:var(--f-slab); font-size:13.5px; padding:4px 10px}
 .dactions{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 .dchip{font-size:12px; font-weight:700; padding:5px 11px; border-radius:99px; border:1px solid currentColor}
 .dchip.ok{color:var(--ok)} .dchip.no{color:var(--no)}
 .dbtn{background:var(--dash-tile); color:var(--dash-fg); border:1px solid var(--dash-line); border-radius:8px; padding:7px 12px; font-weight:600; font-size:12.5px}
-.dbtn:hover{border-color:var(--d1)} .dbtn:focus-visible{outline:2px solid var(--d1); outline-offset:2px}
-.dstory{margin:0; font-size:clamp(15px,1.7vw,19px); line-height:1.5; max-width:62ch; color:var(--dash-fg)}
-.dstory b{color:var(--d1); font-weight:700}
+.dbtn:hover{border-color:#fff} .dbtn:focus-visible{outline:2px solid #fff; outline-offset:2px}
+.dstory{margin:0; font-size:clamp(15px,1.7vw,19px); line-height:1.55; max-width:62ch; color:var(--dash-fg)}
+.dstory b{color:#fff; font-weight:700; text-decoration:underline; text-decoration-color:var(--red); text-decoration-thickness:3px; text-underline-offset:4px}
 .dkpis{display:grid; grid-template-columns:1.6fr repeat(3,1fr); gap:12px}
 @media (max-width:760px){.dkpis{grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px} .dk.wide{grid-column:1/-1} .dk{padding:12px} .dk b{font-size:20px}}
 .dk{background:var(--dash-tile); border:1px solid var(--dash-line); border-radius:12px; padding:14px 16px; display:flex; flex-direction:column; gap:2px; min-width:0}
 .dk span{font-size:11.5px; text-transform:uppercase; letter-spacing:.08em; color:var(--dash-muted); font-weight:600}
-.dk b{font-family:var(--f-mono); font-weight:600; font-size:clamp(22px,2.6vw,30px); font-variant-numeric:tabular-nums; line-height:1.2; overflow-wrap:anywhere}
+.dk b{font-family:var(--f-slab); font-weight:600; font-size:clamp(22px,2.6vw,30px); font-variant-numeric:tabular-nums; line-height:1.2; overflow-wrap:anywhere}
 .dk b small{font-size:.5em; color:var(--dash-muted)}
 .dk i{font-style:normal; font-size:12px; color:var(--dash-muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.dk.wide b{color:var(--d2)}
+.dk.wide{background:var(--red); border-color:var(--red)}
+.dk.wide span,.dk.wide i{color:rgba(255,255,255,.85)}
+.dk.wide b{color:#fff}
 .dgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px}
 .dcard{background:var(--dash-tile); border:1px solid var(--dash-line); border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:12px; min-width:0}
 .dcard h3{margin:0; font-size:12px; text-transform:uppercase; letter-spacing:.1em; color:var(--dash-muted); font-weight:700}
@@ -160,7 +171,7 @@ tr.bqsec td{background:var(--surface-2);font-weight:700;font-size:11.5px;text-tr
 .g-tgt{stroke:var(--d2); stroke-width:3; stroke-linecap:round}
 #dashWrap{margin-top:20px}
 #dashWrap:empty{display:none}
-.g-num{fill:var(--dash-fg); font:600 26px var(--f-mono); text-anchor:middle}
+.g-num{fill:var(--dash-fg); font:600 26px var(--f-slab); text-anchor:middle}
 .g-sub{fill:var(--dash-muted); font:500 9.5px var(--f-body); text-anchor:middle}
 .dstats{display:grid; grid-template-columns:1fr 1fr; gap:10px}
 .dstats div{display:flex; flex-direction:column; gap:1px; border-top:1px solid var(--dash-line); padding-top:8px; min-width:0}
