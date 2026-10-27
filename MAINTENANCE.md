@@ -1,6 +1,6 @@
 # Pembaruan data mingguan
 
-Panduan ini dijalankan oleh routine cloud Claude setiap Selasa. Tujuannya menjaga **data referensi** di `index.html` tetap terkini tanpa mengubah logika perhitungan maupun tampilan.
+Panduan ini dijalankan oleh tugas terjadwal Claude di komputer pemilik setiap Selasa pukul 18.00 WIB (salinan kerja: `C:\Users\fadli\Documents\AI-Infrastructure-Calculator`). Tujuannya menjaga **data referensi** di `index.html` tetap terkini tanpa mengubah logika perhitungan maupun tampilan.
 
 ## Aturan umum
 
@@ -38,7 +38,10 @@ Perbarui teks `ref`/`refDate` vendor dan komentar "Sumber ... Dicek <tanggal>" d
 
 ## 4. Uji sebelum commit
 
-1. Ekstrak blok `<script>` terakhir (tanpa tag) ke file sementara, lalu jalankan `node --check` padanya. Harus lolos tanpa error.
+1. Cek sintaks JavaScript:
+   - Jika `node` tersedia: ekstrak blok `<script>` terakhir (tanpa tag) ke file sementara, lalu jalankan `node --check` padanya.
+   - Jika tidak ada `node`: sajikan `index.html` lewat server lokal sederhana dan buka di browser bawaan Claude, lalu pastikan tidak ada error di console dan bagian hasil, BoQ, dan dashboard tampil.
+   Harus lolos tanpa error.
 2. Pastikan dengan `grep` bahwa `const MODELS`, `const GPUS`, `const CISCO`, `const DELL`, `const HPE`, `const SUPERMICRO`, dan `const VENDORS` masih ada, dan setiap `id` di `MODELS` unik.
 3. Jika ada pengujian yang gagal dan tidak bisa diperbaiki dengan aman, jangan push. Buat branch `update/<tanggal>` dan push branch itu saja.
 
