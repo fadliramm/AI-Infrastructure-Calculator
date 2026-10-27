@@ -1,0 +1,999 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Kalkulator Sizing Server AI</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<style>
+/* Layout: panel input di kiri (konfigurasi), hasil spesifikasi di kanan; menumpuk satu kolom di layar sempit */
+:root{
+  --bg:#f3f5f7; --surface:#ffffff; --surface-2:#e9edf1; --fg:#141a21; --muted:#5a6673; --line:#d5dce3;
+  --accent:#0b6e69; --accent-soft:#d6ecea; --accent-fg:#ffffff;
+  --warn:#a35a00; --warn-soft:#fbecd6; --bad:#b3261e; --bad-soft:#f9dedc; --good:#1f7a3a; --good-soft:#dcefe1;
+  --seg1:#0b6e69; --seg2:#5f9ea0; --seg3:#c9a227;
+  --f-display:"Archivo","Segoe UI",system-ui,sans-serif; --f-body:"Archivo","Segoe UI",system-ui,sans-serif; --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#0f1418; --surface:#171e24; --surface-2:#202931; --fg:#e6ecf1; --muted:#93a1ae; --line:#2c3842;
+  --accent:#3fbfb5; --accent-soft:#163a38; --accent-fg:#06201e;
+  --warn:#f0b35c; --warn-soft:#3a2a12; --bad:#f2938b; --bad-soft:#3d1a18; --good:#7fd197; --good-soft:#163222;
+  --seg1:#3fbfb5; --seg2:#7aa9ab; --seg3:#d9b84a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1418; --surface:#171e24; --surface-2:#202931; --fg:#e6ecf1; --muted:#93a1ae; --line:#2c3842;
+  --accent:#3fbfb5; --accent-soft:#163a38; --accent-fg:#06201e;
+  --warn:#f0b35c; --warn-soft:#3a2a12; --bad:#f2938b; --bad-soft:#3d1a18; --good:#7fd197; --good-soft:#163222;
+  --seg1:#3fbfb5; --seg2:#7aa9ab; --seg3:#d9b84a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:14px;line-height:1.5}
+.wrap{max-width:1360px;margin:0 auto;padding-inline:16px;padding-block:20px 48px}
+header.top{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px;margin-bottom:18px}
+h1{font-family:var(--f-display);font-weight:800;font-size:clamp(22px,3vw,30px);letter-spacing:-.01em;margin:0;text-wrap:balance}
+.sub{color:var(--muted);margin:4px 0 0;max-width:70ch}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+button{font:inherit;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--fg);padding:9px 14px;border-radius:8px;font-weight:600;display:inline-flex;align-items:center;gap:8px}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-fg);border-color:var(--accent)}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.status{font-size:12px;color:var(--muted);min-height:18px;text-align:right;width:100%}
+
+.grid{display:grid;grid-template-columns:minmax(300px,420px) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:900px){.grid{grid-template-columns:minmax(0,1fr)}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:16px}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);background:var(--surface-2);border-radius:10px;padding:4px;gap:4px}
+.seg button{border:0;background:transparent;color:var(--muted);padding:9px 4px;border-radius:7px;font-weight:600;font-size:13px;line-height:1.2}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.seg button small{display:block;font-weight:400;font-size:10.5px;color:var(--muted);margin-top:2px}
+.modehint{font-size:12.5px;color:var(--muted);margin:-6px 0 0}
+
+fieldset{border:0;border-top:1px solid var(--line);margin:0;padding:14px 0 0;display:grid;grid-template-columns:1fr 1fr;gap:10px 12px}
+legend{font-family:var(--f-display);font-weight:700;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);padding:0 8px 0 0;float:left;width:100%;margin-bottom:4px}
+.f{display:flex;flex-direction:column;gap:4px;min-width:0}
+.f.full{grid-column:1/-1}
+label{font-size:12.5px;font-weight:600;color:var(--fg)}
+label .u{font-weight:400;color:var(--muted)}
+.hint{font-size:11.5px;color:var(--muted);line-height:1.35}
+input[type=number],select{width:100%;font:inherit;font-size:13.5px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg);font-variant-numeric:tabular-nums}
+.hfbox{background:var(--accent-soft);border-radius:10px;padding:12px}
+.hfrow{display:flex;gap:8px;min-width:0}
+.hfrow input{flex:1;min-width:0}
+input[type=text],textarea{font:inherit;font-size:13.5px;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg);width:100%}
+textarea{font-family:var(--f-mono);font-size:12px;resize:vertical}
+.btn.small{padding:7px 12px;font-size:13px;white-space:nowrap;align-self:flex-start}
+.hfmsg{font-size:12.5px;line-height:1.4;padding:8px 10px;border-radius:7px;background:var(--surface);border:1px solid var(--line)}
+.hfmsg.ok{border-color:var(--good);color:var(--good)}
+.hfmsg.warn{border-color:var(--warn);color:var(--fg)}
+.hfmsg a{color:var(--accent);font-weight:600;word-break:break-all}
+.modelinfo a{color:var(--accent)}
+.chk{display:flex;gap:8px;align-items:flex-start;font-size:13px;grid-column:1/-1}
+.chk input{margin-top:3px;accent-color:var(--accent)}
+
+/* hasil */
+.results{display:flex;flex-direction:column;gap:20px;min-width:0}
+.hero{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:20px}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--muted)}
+.headline{font-family:var(--f-display);font-weight:800;font-size:clamp(20px,2.6vw,28px);margin:6px 0 4px;text-wrap:balance;letter-spacing:-.01em}
+.headline em{font-style:normal;color:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:14px}
+.kpi{background:var(--surface);padding:12px 14px}
+.kpi .v{font-family:var(--f-mono);font-weight:600;font-size:19px;font-variant-numeric:tabular-nums}
+.kpi .l{font-size:11.5px;color:var(--muted)}
+.pills{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.pill{font-size:12px;font-weight:600;padding:3px 9px;border-radius:99px;background:var(--surface-2);color:var(--fg)}
+.pill.good{background:var(--good-soft);color:var(--good)}
+.pill.warn{background:var(--warn-soft);color:var(--warn)}
+.pill.bad{background:var(--bad-soft);color:var(--bad)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:18px;min-width:0}
+.card h2{font-family:var(--f-display);font-size:17px;font-weight:700;margin:0 0 4px}
+.card .desc{color:var(--muted);font-size:12.5px;margin:0 0 12px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:20px}
+.tbl{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:700}
+td.n,th.n{text-align:right;font-family:var(--f-mono);font-variant-numeric:tabular-nums;white-space:nowrap}
+td.k{color:var(--muted);width:44%}
+td.v{font-weight:600}
+tr.sel td{background:var(--accent-soft)}
+tr.na td{color:var(--muted)}
+.bar{display:flex;height:22px;border-radius:6px;overflow:hidden;background:var(--surface-2);margin:8px 0 6px}
+.bar span{display:block;height:100%}
+.legend{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12px;color:var(--muted)}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin-right:5px;vertical-align:-1px}
+.notes{margin:0;padding-left:18px;color:var(--muted);font-size:12.5px;display:grid;gap:4px}
+.sw{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:10px}
+.sw div{border:1px solid var(--line);border-radius:8px;padding:10px 12px}
+.sw b{display:block;font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:2px}
+.mono{font-family:var(--f-mono)}
+@media (prefers-reduced-motion:no-preference){.kpi .v,.headline{transition:color .2s}}
+</style>
+</head>
+<body style="margin:0">
+
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Kalkulator Sizing Server AI On-Premise</h1>
+      <p class="sub">Isi profil beban kerja customer. Spesifikasi GPU, node, memori, storage, jaringan, daya, dan estimasi biaya dihitung langsung dari parameter model dan jumlah pengguna.</p>
+    </div>
+    <div class="actions">
+      <button class="btn" id="btnXlsx" type="button">Export Excel</button>
+      <button class="btn primary" id="btnPdf" type="button">Export PDF</button>
+      <div class="status" id="status" role="status"></div>
+    </div>
+  </header>
+
+  <div class="grid">
+    <!-- INPUT -->
+    <form class="panel" id="form" onsubmit="return false">
+      <div class="f full">
+        <label for="custName">Nama customer / proyek</label>
+        <input type="text" id="custName" value="Contoh: PT Nusantara Digital" style="width:100%;font:inherit;padding:7px 9px;border:1px solid var(--line);border-radius:7px;background:var(--bg);color:var(--fg)">
+      </div>
+      <div>
+        <div class="seg" role="group" aria-label="Jenis beban kerja">
+          <button type="button" data-mode="inference" aria-pressed="true">Inference<small>serving LLM</small></button>
+          <button type="button" data-mode="rag" aria-pressed="false">RAG<small>LLM + dokumen</small></button>
+          <button type="button" data-mode="finetune" aria-pressed="false">Fine-tuning<small>LoRA / full</small></button>
+          <button type="button" data-mode="training" aria-pressed="false">Training<small>pre-training</small></button>
+        </div>
+      </div>
+      <p class="modehint" id="modeHint"></p>
+
+      <fieldset>
+        <legend>Model</legend>
+        <div class="f full">
+          <label for="model">Model dasar</label>
+          <select id="model"></select>
+        </div>
+        <div class="f full hfbox" data-custom>
+          <label for="hfUrl">Link model Hugging Face</label>
+          <div class="hfrow">
+            <input type="text" id="hfUrl" placeholder="https://huggingface.co/Qwen/Qwen3-14B" autocomplete="off" spellcheck="false">
+            <button type="button" class="btn small" id="hfGo">Isi otomatis</button>
+          </div>
+          <span class="hint">Tempel link repo atau ID seperti <span class="mono">org/nama-model</span>. Parameter diisi dari config.json dan metadata safetensors.</span>
+          <div class="hfmsg" id="hfMsg" role="status" hidden></div>
+          <div class="f" id="hfPasteWrap" hidden>
+            <label for="hfPaste">Tempel isi config.json</label>
+            <textarea id="hfPaste" rows="5" spellcheck="false" placeholder='{"num_hidden_layers": 40, "hidden_size": 5120, ...}'></textarea>
+            <button type="button" class="btn small" id="hfParse">Baca config.json</button>
+          </div>
+        </div>
+        <div class="f" data-custom><label for="cParams">Total parameter <span class="u">(miliar)</span></label><input type="number" id="cParams" value="14.8" min="0.1" step="0.1"></div>
+        <div class="f" data-custom><label for="cActive">Parameter aktif <span class="u">(MoE)</span></label><input type="number" id="cActive" value="14.8" min="0.1" step="0.1"></div>
+        <div class="f" data-custom><label for="cLayers">Jumlah layer</label><input type="number" id="cLayers" value="40" min="1"></div>
+        <div class="f" data-custom><label for="cHidden">Hidden size</label><input type="number" id="cHidden" value="5120" min="256" step="128"></div>
+        <div class="f" data-custom><label for="cAttn">Jenis attention</label><select id="cAttn"><option value="gqa">GQA / MHA (K + V)</option><option value="mla">MLA / latent (DeepSeek, GLM, Kimi)</option></select></div>
+        <div class="f" data-custom><label for="cKvHeads">KV heads</label><input type="number" id="cKvHeads" value="8" min="1"></div>
+        <div class="f" data-custom><label for="cHeadDim">Head dim <span class="u">(MLA: dim latent)</span></label><input type="number" id="cHeadDim" value="128" min="16" step="16"></div>
+        <div class="f" data-custom><label for="cKvLayers">Layer attention penuh</label><input type="number" id="cKvLayers" value="40" min="0" step="1"><span class="hint">model hybrid (Mamba/linear) lebih sedikit</span></div>
+        <div class="f" data-custom><label for="cSwLayers">Layer sliding window</label><input type="number" id="cSwLayers" value="0" min="0"></div>
+        <div class="f" data-custom><label for="cSwWin">Ukuran window <span class="u">(token)</span></label><input type="number" id="cSwWin" value="0" min="0"></div>
+        <div class="f" data-serve><label for="wq">Presisi bobot</label>
+          <select id="wq"><option value="4">FP32 (4 byte, presisi penuh)</option><option value="2">BF16 / FP16 (2 byte)</option><option value="1" selected>FP8 / INT8 (1 byte)</option><option value="0.5">INT4 / AWQ / GPTQ (0.5 byte)</option></select></div>
+        <div class="f" data-serve><label for="kvq">Presisi KV cache</label>
+          <select id="kvq"><option value="2">FP16 (2 byte)</option><option value="1" selected>FP8 (1 byte)</option></select></div>
+        <div class="hint full f modelinfo" id="modelInfo"></div>
+      </fieldset>
+
+      <fieldset data-serve>
+        <legend>Pengguna &amp; pola pemakaian</legend>
+        <div class="f full"><label for="usecase">Profil use case</label>
+          <select id="usecase">
+            <option value="chat">Chatbot / asisten internal</option>
+            <option value="code">Coding assistant</option>
+            <option value="sum">Ringkasan / analisis dokumen panjang</option>
+            <option value="agent">Agentic workflow</option>
+            <option value="custom">Kustom</option>
+          </select></div>
+        <div class="f"><label for="users">Total pengguna terdaftar</label><input type="number" id="users" value="1000" min="1"></div>
+        <div class="f"><label for="concPct">Konkurensi puncak <span class="u">(%)</span></label><input type="number" id="concPct" value="10" min="0.1" max="100" step="0.5"><span class="hint">% pengguna yang sedang menunggu jawaban di jam sibuk</span></div>
+        <div class="f"><label for="inTok">Token input rata-rata</label><input type="number" id="inTok" value="1500" min="16" step="100"><span class="hint">prompt + riwayat chat</span></div>
+        <div class="f"><label for="outTok">Token output rata-rata</label><input type="number" id="outTok" value="400" min="16" step="50"></div>
+        <div class="f"><label for="tps">Kecepatan per user <span class="u">(token/dtk)</span></label><input type="number" id="tps" value="20" min="1"><span class="hint">nyaman dibaca: 15–30</span></div>
+        <div class="f"><label for="ttft">Target TTFT <span class="u">(detik)</span></label><input type="number" id="ttft" value="2" min="0.1" step="0.1"><span class="hint">waktu sampai token pertama</span></div>
+        <div class="f"><label for="growth">Cadangan pertumbuhan <span class="u">(%)</span></label><input type="number" id="growth" value="30" min="0" step="5"></div>
+      </fieldset>
+
+      <fieldset data-mode-only="rag">
+        <legend>Korpus dokumen (RAG)</legend>
+        <div class="f"><label for="docs">Jumlah dokumen</label><input type="number" id="docs" value="50000" min="1"></div>
+        <div class="f"><label for="pages">Halaman per dokumen</label><input type="number" id="pages" value="10" min="1"></div>
+        <div class="f"><label for="tokPage">Token per halaman</label><input type="number" id="tokPage" value="500" min="50" step="50"></div>
+        <div class="f"><label for="docMB">Ukuran file rata-rata <span class="u">(MB)</span></label><input type="number" id="docMB" value="1.5" min="0.01" step="0.1"></div>
+        <div class="f"><label for="chunk">Ukuran chunk <span class="u">(token)</span></label><input type="number" id="chunk" value="512" min="64" step="64"></div>
+        <div class="f"><label for="overlap">Overlap chunk <span class="u">(token)</span></label><input type="number" id="overlap" value="64" min="0" step="16"></div>
+        <div class="f"><label for="topk">Top-K chunk ke prompt</label><input type="number" id="topk" value="6" min="1" max="50"></div>
+        <div class="f"><label for="ingestH">Target indexing awal <span class="u">(jam)</span></label><input type="number" id="ingestH" value="12" min="1"></div>
+        <div class="f full"><label for="emb">Model embedding</label>
+          <select id="emb">
+            <option value="bge-m3">BGE-M3 (0.57B, 1024 dim, multibahasa)</option>
+            <option value="e5">multilingual-e5-large (0.56B, 1024 dim)</option>
+            <option value="nomic">nomic-embed-text v1.5 (0.14B, 768 dim)</option>
+            <option value="qwen3emb">Qwen3-Embedding-8B (8B, 4096 dim)</option>
+          </select></div>
+        <label class="chk"><input type="checkbox" id="rerank" checked> Gunakan reranker (bge-reranker-v2-m3)</label>
+      </fieldset>
+
+      <fieldset data-mode-only="finetune">
+        <legend>Fine-tuning</legend>
+        <div class="f full"><label for="ftMethod">Metode</label>
+          <select id="ftMethod">
+            <option value="qlora">QLoRA (bobot 4-bit + adapter)</option>
+            <option value="lora" selected>LoRA (bobot BF16 + adapter)</option>
+            <option value="full">Full fine-tuning (semua bobot)</option>
+          </select></div>
+        <div class="f"><label for="samples">Jumlah sampel dataset</label><input type="number" id="samples" value="50000" min="1"></div>
+        <div class="f"><label for="tokSample">Token per sampel</label><input type="number" id="tokSample" value="1024" min="16" step="64"></div>
+        <div class="f"><label for="epochs">Epoch</label><input type="number" id="epochs" value="3" min="1"></div>
+        <div class="f"><label for="ftHours">Target selesai <span class="u">(jam)</span></label><input type="number" id="ftHours" value="24" min="1"></div>
+        <div class="f"><label for="seqLen">Sequence length</label><input type="number" id="seqLen" value="4096" min="256" step="256"></div>
+        <div class="f"><label for="mbs">Micro-batch per GPU</label><input type="number" id="mbs" value="1" min="1"></div>
+      </fieldset>
+
+      <fieldset data-mode-only="training">
+        <legend>Pre-training</legend>
+        <div class="f"><label for="trTok">Dataset <span class="u">(miliar token)</span></label><input type="number" id="trTok" value="200" min="0.1" step="10"></div>
+        <div class="f"><label for="trDays">Target durasi <span class="u">(hari)</span></label><input type="number" id="trDays" value="30" min="1"></div>
+        <div class="f"><label for="trSeq">Sequence length</label><input type="number" id="trSeq" value="4096" min="256" step="256"></div>
+        <div class="f"><label for="ckptKeep">Checkpoint disimpan</label><input type="number" id="ckptKeep" value="5" min="1"></div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Infrastruktur</legend>
+        <div class="f full"><label for="gpuSel">GPU</label><select id="gpuSel"></select><span class="hint">Mode otomatis memilih GPU dengan estimasi biaya terendah yang memenuhi target.</span></div>
+        <div class="f" data-train><label for="mfu">MFU <span class="u">(%)</span></label><input type="number" id="mfu" value="40" min="5" max="70"><span class="hint">utilisasi FLOPs riil, umumnya 35–50%</span></div>
+        <div class="f"><label for="util">Batas pakai VRAM <span class="u">(%)</span></label><input type="number" id="util" value="90" min="50" max="98"></div>
+        <div class="f"><label for="fx">Kurs <span class="u">(Rp per USD)</span></label><input type="number" id="fx" value="16500" min="1" step="50"></div>
+        <label class="chk" data-serve><input type="checkbox" id="ha" checked> Redundansi N+1 (replika cadangan untuk high availability)</label>
+        <label class="chk" data-train-serve><input type="checkbox" id="serveAfter"> Sertakan klaster inference untuk serving model hasil</label>
+      </fieldset>
+    </form>
+
+    <!-- OUTPUT -->
+    <main class="results" id="results" aria-live="polite"></main>
+  </div>
+</div>
+
+<script>
+/* ===================== DATA REFERENSI ===================== */
+const GPUS = [
+  {id:'l4',     name:'NVIDIA L4 24GB',                    mem:24,  bw:0.30, bf16:121,  fp8:242,  tdp:72,   price:2800,  form:'PCIe', fast:false},
+  {id:'l40s',   name:'NVIDIA L40S 48GB',                  mem:48,  bw:0.864,bf16:362,  fp8:733,  tdp:350,  price:9500,  form:'PCIe', fast:false},
+  {id:'rtx6kb', name:'NVIDIA RTX PRO 6000 Blackwell 96GB',mem:96,  bw:1.79, bf16:500,  fp8:1000, tdp:600,  price:9800,  form:'PCIe', fast:false},
+  {id:'a100',   name:'NVIDIA A100 SXM 80GB',              mem:80,  bw:2.04, bf16:312,  fp8:312,  tdp:400,  price:17000, form:'SXM',  fast:true},
+  {id:'h100',   name:'NVIDIA H100 SXM 80GB',              mem:80,  bw:3.35, bf16:989,  fp8:1979, tdp:700,  price:30000, form:'SXM',  fast:true},
+  {id:'h200',   name:'NVIDIA H200 SXM 141GB',             mem:141, bw:4.8,  bf16:989,  fp8:1979, tdp:700,  price:35000, form:'SXM',  fast:true},
+  {id:'b200',   name:'NVIDIA B200 SXM 180GB',             mem:180, bw:7.7,  bf16:2250, fp8:4500, tdp:1000, price:45000, form:'SXM',  fast:true},
+  {id:'mi300x', name:'AMD Instinct MI300X 192GB',         mem:192, bw:5.3,  bf16:1307, fp8:2615, tdp:750,  price:20000, form:'OAM',  fast:true},
+];
+// Katalog model: diambil dari Hugging Face (trending text-generation & image-text-to-text, 15 Okt 2026).
+// Arsitektur dibaca dari config.json tiap repo; total parameter dari metadata safetensors.
+// kvLayers = layer attention penuh (KV tumbuh dengan konteks); swLayers/swWindow = layer sliding window.
+const HF_DATE = '15 Okt 2026';
+const MODELS = [
+  // --- trending
+  {id:'qwen38-27b',     g:'trend', hf:'Qwen/Qwen3.8-27B',                       name:'Qwen3.8 27B',                       params:27.78,  active:27.78, layers:64, hidden:5120, kvHeads:4,  headDim:256, kvLayers:16},
+  {id:'gemma4-31b',     g:'trend', hf:'google/gemma-4-31B-it',                  name:'Gemma 4 31B',                       params:31.27,  active:31.27, layers:60, hidden:5376, kvHeads:16, headDim:256, kvLayers:10, swLayers:50, swWindow:1024},
+  {id:'gemma4-12b',     g:'trend', hf:'google/gemma-4-12B-it',                  name:'Gemma 4 12B',                       params:11.96,  active:11.96, layers:48, hidden:3840, kvHeads:8,  headDim:256, kvLayers:8,  swLayers:40, swWindow:1024},
+  {id:'qwen36-35b-a3b', g:'trend', hf:'Qwen/Qwen3.6-35B-A3B',                   name:'Qwen3.6 35B-A3B (MoE)',             params:35.95,  active:3,     layers:40, hidden:2048, kvHeads:2,  headDim:256, kvLayers:10},
+  {id:'qwen38-flash',   g:'trend', hf:'Qwen/Qwen3.8-Flash-Next',                name:'Qwen3.8 Flash-Next 180B (MoE)',     params:180,    active:8.08,  layers:48, hidden:2560, kvHeads:2,  headDim:256, kvLayers:12},
+  {id:'lfm25-24b',      g:'trend', hf:'LiquidAI/LFM2.5-24B-A2B',                name:'LFM2.5 24B-A2B (MoE)',              params:23.97,  active:2,     layers:40, hidden:2048, kvHeads:8,  headDim:64,  kvLayers:10},
+  {id:'mellum21',       g:'trend', hf:'JetBrains/Mellum2.1-12B-A2.5B-Thinking', name:'Mellum 2.1 12B-A2.5B (MoE, coding)',params:12.15,  active:2.5,   layers:28, hidden:2304, kvHeads:4,  headDim:128, kvLayers:7,  swLayers:21, swWindow:1024},
+  {id:'kolibri1',       g:'trend', hf:'Aleph-Alpha/Kolibri-1',                  name:'Kolibri-1 78B (MoE)',               params:78.1,   active:3.78,  layers:50, hidden:2560, kvHeads:4,  headDim:128, kvLayers:10, swLayers:40, swWindow:513},
+  {id:'gptoss-20b',     g:'trend', hf:'openai/gpt-oss-20b',                     name:'gpt-oss-20b (MoE)',                 params:20.91,  active:3.6,   layers:24, hidden:2880, kvHeads:8,  headDim:64,  kvLayers:12, swLayers:12, swWindow:128},
+  {id:'gptoss-120b',    g:'trend', hf:'openai/gpt-oss-120b',                    name:'gpt-oss-120b (MoE)',                params:116.83, active:5.1,   layers:36, hidden:2880, kvHeads:8,  headDim:64,  kvLayers:18, swLayers:18, swWindow:128},
+  {id:'nemotron3-nano', g:'trend', hf:'nvidia/NVIDIA-Nemotron-3-Nano-30B-A3B-BF16', name:'Nemotron 3 Nano 30B-A3B (hybrid Mamba)', params:31.58, active:3.5, layers:52, hidden:2688, kvHeads:2, headDim:128, kvLayers:6},
+  {id:'minicpm5-2b',    g:'trend', hf:'openbmb/MiniCPM5-2B',                    name:'MiniCPM5 2B',                       params:2.52,   active:2.52,  layers:42, hidden:2048, kvHeads:2,  headDim:128, kvLayers:42},
+  {id:'minicpmv47',     g:'trend', hf:'openbmb/MiniCPM-V-4.7-35B-A3B',          name:'MiniCPM-V 4.7 35B-A3B (vision)',    params:35.21,  active:3,     layers:40, hidden:2048, kvHeads:2,  headDim:256, kvLayers:10},
+  {id:'glm47-flash',    g:'trend', hf:'zai-org/GLM-4.7-Flash',                  name:'GLM-4.7-Flash 31B (MoE)',           params:31.22,  active:4.06,  layers:47, hidden:2048, kvHeads:1,  headDim:576, kvLayers:47, mla:true},
+  {id:'glm53-flash',    g:'trend', hf:'zai-org/GLM-5.3-Flash',                  name:'GLM-5.3-Flash 321B (MoE)',          params:321.32, active:17.04, layers:45, hidden:4096, kvHeads:1,  headDim:512, kvLayers:45, mla:true},
+  {id:'glm53',          g:'trend', hf:'zai-org/GLM-5.3',                        name:'GLM-5.3 753B (MoE)',                params:753.33, active:41.61, layers:78, hidden:6144, kvHeads:1,  headDim:576, kvLayers:78, mla:true},
+  {id:'dsv4-flash',     g:'trend', hf:'deepseek-ai/DeepSeek-V4-Flash-0731',     name:'DeepSeek-V4-Flash 304B (MoE)',      params:304.18, active:21.33, layers:43, hidden:4096, kvHeads:1,  headDim:512, kvLayers:7.41, swLayers:43, swWindow:128, mla:true},
+  {id:'dsv41-flash',    g:'trend', hf:'deepseek-ai/DeepSeek-V4.1-Flash',        name:'DeepSeek-V4.1-Flash 763B (MoE)',    params:763.21, active:33.99, layers:40, hidden:5120, kvHeads:1,  headDim:512, kvLayers:31, swLayers:40, swWindow:128, mla:true},
+  {id:'dsv4-pro',       g:'trend', hf:'deepseek-ai/DeepSeek-V4-Pro',            name:'DeepSeek-V4-Pro 1,6T (MoE)',        params:1598.84,active:87.31, layers:61, hidden:7168, kvHeads:1,  headDim:512, kvLayers:7.74, swLayers:61, swWindow:128, mla:true},
+  {id:'mimo-v26-pro',   g:'trend', hf:'XiaomiMiMo/MiMo-V2.6-Pro-RL',            name:'MiMo-V2.6-Pro 1T (MoE)',            params:1024.22,active:44.98, layers:70, hidden:6144, kvHeads:8,  headDim:192, kvLayers:10, swLayers:60, swWindow:128},
+  {id:'kimi-k2',        g:'trend', hf:'moonshotai/Kimi-K2-Instruct',            name:'Kimi K2 1T (MoE)',                  params:1026.41,active:32.86, layers:61, hidden:7168, kvHeads:1,  headDim:576, kvLayers:61, mla:true},
+  // --- populer & banyak dipakai di enterprise
+  {id:'qwen3-8b',       g:'pop', hf:'Qwen/Qwen3-8B',                            name:'Qwen3 8B',                          params:8.19,   active:8.19,  layers:36, hidden:4096, kvHeads:8,  headDim:128, kvLayers:36},
+  {id:'qwen3-32b',      g:'pop', hf:'Qwen/Qwen3-32B',                           name:'Qwen3 32B',                         params:32.76,  active:32.76, layers:64, hidden:5120, kvHeads:8,  headDim:128, kvLayers:64},
+  {id:'qwen3-30b-a3b',  g:'pop', hf:'Qwen/Qwen3-30B-A3B',                       name:'Qwen3 30B-A3B (MoE)',               params:30.53,  active:3.3,   layers:48, hidden:2048, kvHeads:4,  headDim:128, kvLayers:48},
+  {id:'mistral-small32',g:'pop', hf:'mistralai/Mistral-Small-3.2-24B-Instruct-2506', name:'Mistral Small 3.2 24B',          params:24.01,  active:24.01, layers:40, hidden:5120, kvHeads:8,  headDim:128, kvLayers:40},
+  {id:'llama31-8b',     g:'pop', hf:'meta-llama/Llama-3.1-8B-Instruct',         name:'Llama 3.1 8B',                      params:8.03,   active:8.03,  layers:32, hidden:4096, kvHeads:8,  headDim:128, kvLayers:32},
+  {id:'llama33-70b',    g:'pop', hf:'meta-llama/Llama-3.3-70B-Instruct',        name:'Llama 3.3 70B',                     params:70.55,  active:70.55, layers:80, hidden:8192, kvHeads:8,  headDim:128, kvLayers:80},
+  {id:'llama31-405b',   g:'pop', hf:'meta-llama/Llama-3.1-405B-Instruct',       name:'Llama 3.1 405B',                    params:405.85, active:405.85,layers:126,hidden:16384,kvHeads:8,  headDim:128, kvLayers:126},
+  {id:'dsv32',          g:'pop', hf:'deepseek-ai/DeepSeek-V3.2',                name:'DeepSeek-V3.2 685B (MoE)',          params:685.36, active:37,    layers:61, hidden:7168, kvHeads:1,  headDim:576, kvLayers:61, mla:true},
+  {id:'dsr1',           g:'pop', hf:'deepseek-ai/DeepSeek-R1',                  name:'DeepSeek-R1 685B (MoE)',            params:684.49, active:37,    layers:61, hidden:7168, kvHeads:1,  headDim:576, kvLayers:61, mla:true},
+  {id:'custom',         g:'custom', name:'Model kustom (dari link Hugging Face)…'}
+];
+let CUSTOM_HF = '';   // repo terakhir yang berhasil dibaca untuk model kustom
+const EMB = {'bge-m3':{name:'BGE-M3',p:0.57,dim:1024},'e5':{name:'multilingual-e5-large',p:0.56,dim:1024},'nomic':{name:'nomic-embed-text v1.5',p:0.14,dim:768},'qwen3emb':{name:'Qwen3-Embedding-8B',p:8,dim:4096}};
+const USECASE = {chat:{inTok:1500,outTok:400,tps:20,ttft:2},code:{inTok:4000,outTok:600,tps:30,ttft:1.5},sum:{inTok:12000,outTok:800,tps:15,ttft:6},agent:{inTok:8000,outTok:1000,tps:25,ttft:3}};
+const MODE_HINT = {
+  inference:'Serving model LLM untuk chatbot, asisten, atau API internal. Dihitung dari VRAM bobot model, KV cache per pengguna aktif, dan throughput decode.',
+  rag:'Inference ditambah retrieval dokumen: konteks prompt bertambah sebanyak Top-K chunk, plus server embedding, reranker, dan vector database.',
+  finetune:'Melatih ulang model dasar dengan data customer. Dihitung dari memori optimizer, aktivasi, dan total FLOPs agar selesai dalam target jam.',
+  training:'Melatih model dari nol (pre-training). Dihitung dengan aturan 6 × parameter × token, MFU, dan memori state optimizer yang di-shard (ZeRO/FSDP).'
+};
+
+/* ===================== UTIL ===================== */
+const $ = id => document.getElementById(id);
+const num = id => { const v = parseFloat($(id).value); return isFinite(v) ? v : 0; };
+const ceil = Math.ceil;
+const fmt = (x,d=0) => (isFinite(x)? x.toLocaleString('id-ID',{maximumFractionDigits:d,minimumFractionDigits:d}) : '–');
+const fmtGB = gb => gb>=1000 ? fmt(gb/1000,2)+' TB' : gb<1 ? fmt(gb*1000,0)+' MB' : fmt(gb,gb<10?1:0)+' GB';
+const usd = x => 'US$ '+fmt(x);
+const idr = x => 'Rp '+ (x>=1e9 ? fmt(x/1e9,2)+' M' : fmt(x/1e6,0)+' jt');
+const roundUpTo = (x, list) => list.find(v => v >= x) ?? list[list.length-1];
+const roundGpus = n => n<=1?1 : n<=2?2 : n<=4?4 : n<=8?8 : ceil(n/8)*8;
+
+let MODE = 'inference';
+
+function getModel(){
+  const id = $('model').value;
+  if(id==='custom'){
+    const params = num('cParams');
+    return {id, hf:CUSTOM_HF, name: CUSTOM_HF ? CUSTOM_HF.split('/').pop() : 'Model kustom', params, active:Math.min(num('cActive')||params, params),
+      layers:num('cLayers'), hidden:num('cHidden'), kvHeads:num('cKvHeads'), headDim:num('cHeadDim'), mla:$('cAttn').value==='mla',
+      kvLayers:Math.min(num('cKvLayers')||num('cLayers'), num('cLayers')), swLayers:num('cSwLayers'), swWindow:num('cSwWin')};
+  }
+  return MODELS.find(m=>m.id===id);
+}
+// byte KV cache untuk satu sesi sepanjang ctx token
+function kvSeqBytes(m, kvB, ctx){
+  const per = (m.mla?1:2)*m.kvHeads*m.headDim*kvB;      // MLA/latent: satu vektor; GQA: K dan V
+  const full = m.kvLayers ?? m.layers;
+  return per*(full*ctx + (m.swLayers||0)*Math.min(ctx, m.swWindow||ctx));
+}
+// byte KV cache per token pada layer attention penuh (yang tumbuh dengan konteks)
+function kvPerToken(m, kvB){ return (m.mla?1:2)*m.kvHeads*m.headDim*kvB*(m.kvLayers ?? m.layers); }
+
+/* ===================== MODEL INFERENCE ===================== */
+function sizeInference(gpu, m, p){
+  const W = m.params*p.wB;                       // GB bobot
+  const kvpt = kvPerToken(m, p.kvB);
+  const promptTok = p.inTok + p.ragTok;
+  const ctxMax = promptTok + p.outTok;
+  const ctxAvg = promptTok + p.outTok/2;
+  const kvSeq = kvSeqBytes(m, p.kvB, ctxMax), kvAvg = kvSeqBytes(m, p.kvB, ctxAvg);
+  const lowPrec = p.wB<=1 && gpu.fp8>gpu.bf16;
+  const flops = (lowPrec? gpu.fp8 : p.wB>=4 ? gpu.bf16/2 : gpu.bf16)*1e12;   // FP32 memakai TF32 tensor core (~½ BF16)
+  const memEff = 0.7, cmpEff = 0.45;
+  const opts = [];
+  for(const tp of [1,2,4,8,16,32]){
+    let eff = tp===1?1:(gpu.fast?0.9:0.72);
+    if(tp>8) eff *= 0.8;                         // pipeline lintas node
+    const overhead = tp*2 + W*0.05;              // runtime CUDA/ROCm + aktivasi
+    const kvMem = tp*gpu.mem*p.util - W - overhead;
+    if(kvMem<=0) continue;
+    const maxB = Math.min(256*Math.max(1,tp/8), Math.floor(kvMem*1e9/kvSeq));
+    if(maxB<1) continue;
+    const ratio = m.active/m.params;
+    const step = b => {
+      const readW = W*1e9*Math.min(1, ratio + (1-ratio)*Math.min(1,b/32));
+      const tMem = (readW + b*kvAvg)/(tp*gpu.bw*1e12*memEff*eff);
+      const tCmp = 2*m.active*1e9*b*(1+promptTok/p.outTok)/(tp*flops*cmpEff*eff); // termasuk prefill (chunked)
+      return Math.max(tMem,tCmp);
+    };
+    let lo=1, hi=maxB, best=0;
+    while(lo<=hi){ const mid=(lo+hi)>>1; if(1/step(mid)>=p.tps){best=mid;lo=mid+1;} else hi=mid-1; }
+    const meets = best>=1;
+    const b = meets? best : 1;
+    const ttft = 2*m.active*1e9*promptTok/(tp*flops*cmpEff*eff) + step(b);
+    const replicas = ceil(p.conc/b);
+    opts.push({tp, b, maxB, replicas, gpus:replicas*tp, tps:1/step(b), ttft, meets, ttftOk: ttft<=p.ttft,
+      W, kvUsed: b*kvSeq/1e9, overhead, perReplicaMem: tp*gpu.mem, kvpt, kvSeq, ctxMax});
+  }
+  if(!opts.length) return null;
+  const ok = opts.filter(o=>o.meets && o.ttftOk);
+  const pool = ok.length? ok : opts.filter(o=>o.meets).length? opts.filter(o=>o.meets) : opts;
+  pool.sort((a,b)=> a.gpus-b.gpus || a.tp-b.tp);
+  const best = {...pool[0], feasible: ok.length>0};
+  if(p.ha) best.replicas += 1;
+  best.gpus = best.replicas*best.tp;
+  best.aggTps = best.tps*Math.min(p.conc, (best.replicas-(p.ha?1:0))*best.b);
+  best.reqPerMin = best.aggTps/p.outTok*60;
+  return best;
+}
+
+/* ===================== MODEL FINE-TUNING & TRAINING ===================== */
+function actGB(m, seq, mb){ return (mb*seq*m.hidden*m.layers*4 + mb*seq*128000*2)/1e9; }
+
+function sizeFinetune(gpu, m, p){
+  const P = m.params;
+  const loraP = P*0.006;
+  let states, factor, label;
+  if(p.method==='full'){ states = P*16; factor = 6; label='BF16 + Adam FP32 (16 byte/param, ZeRO-3)'; }
+  else if(p.method==='lora'){ states = P*2 + loraP*16; factor = 4; label='Bobot BF16 beku + adapter LoRA'; }
+  else { states = P*0.55 + loraP*16; factor = 4*1.3; label='Bobot NF4 beku + adapter LoRA'; }
+  const act = actGB(m, p.seq, p.mbs);
+  const perGpuAvail = gpu.mem*p.util - act - 3;
+  if(perGpuAvail<=0) return null;
+  const nMem = ceil(states/perGpuAvail);
+  const tokens = p.samples*p.tokSample*p.epochs;
+  const flopsTotal = factor*m.active*1e9*tokens;
+  const commEff = n => n===1?1 : (gpu.fast? (n>8?0.88:0.95) : (n>8?0.6:0.8));
+  const rate = n => n*gpu.bf16*1e12*p.mfu*commEff(n);
+  let n = roundGpus(nMem);
+  while(flopsTotal/rate(n)/3600 > p.hours && n<4096) n = roundGpus(n+1);
+  return {gpus:n, nMem, states, act, label, tokens, flopsTotal, hours: flopsTotal/rate(n)/3600, perGpuMem: states/n + act + 3};
+}
+
+function sizeTraining(gpu, m, p){
+  const P = m.params;
+  const states = P*18;
+  const act = actGB(m, p.seq, 1)*0.5;            // dengan tensor/sequence parallel + checkpointing
+  const perGpuAvail = gpu.mem*p.util - act - 4;
+  if(perGpuAvail<=0) return null;
+  const nMem = ceil(states/perGpuAvail);
+  const flopsTotal = 6*m.active*1e9*p.tokensB*1e9;
+  const commEff = n => n===1?1 : (gpu.fast? (n>8?0.85:0.95) : (n>8?0.5:0.75));
+  const rate = n => n*gpu.bf16*1e12*p.mfu*commEff(n);
+  let n = roundGpus(Math.max(nMem, flopsTotal/(p.days*86400*gpu.bf16*1e12*p.mfu*0.85)));
+  while(flopsTotal/rate(n)/86400 > p.days && n<65536) n = roundGpus(n+1);
+  return {gpus:n, nMem, states, act, flopsTotal, days: flopsTotal/rate(n)/86400, perGpuMem: states/n+act+4, chinchilla: 20*P};
+}
+
+/* ===================== NODE / BOM ===================== */
+function buildCluster(role, gpu, gpusNeeded, kind, extra){
+  // kind: 'serve' | 'train'
+  let perNode, nodes, installed;
+  if(gpu.form==='PCIe'){
+    nodes = ceil(gpusNeeded/8); perNode = ceil(gpusNeeded/nodes); installed = nodes*perNode;
+  } else {
+    perNode = (gpusNeeded<=4 && gpu.id!=='mi300x' && gpu.id!=='b200') ? 4 : 8;
+    nodes = ceil(gpusNeeded/perNode); installed = nodes*perNode;
+  }
+  const train = kind==='train';
+  const cores = roundUpTo(Math.max(32, perNode*(train?16:8)), [32,48,64,96,128,192,256]);
+  const ram = roundUpTo(Math.max(256, perNode*gpu.mem*(train?2:1.5)), [256,384,512,768,1024,1536,2048,3072,4096]);
+  const nvme = roundUpTo(Math.max(3.84, (extra?.localTB)||0), [3.84,7.68,15.36,30.72,61.44,122.88]);
+  const drives = nvme<=7.68 ? `2 × ${fmt(nvme/2,2)} TB` : `${ceil(nvme/7.68)} × 7,68 TB`;
+  const fabric = gpu.id==='mi300x' ? 'Infinity Fabric' : (gpu.fast ? 'NVLink/NVSwitch' : 'PCIe Gen5 (tanpa NVLink)');
+  let net;
+  if(nodes>1 && train) net = `${perNode} × 400 Gb/s InfiniBand NDR / RoCE (rail-optimized) + 2 × 100 GbE`;
+  else if(nodes>1) net = `2 × 100 GbE (RoCE) + 2 × 25 GbE manajemen`;
+  else net = `2 × 25/100 GbE + 1 GbE BMC`;
+  const cpuW = 2*(cores>=128?400:300);
+  const nodeW = installed/nodes*gpu.tdp + cpuW + (gpu.form==='PCIe'?600:1500);
+  const totalKW = nodeW*nodes*1.1/1000;
+  const ru = gpu.form==='PCIe' ? (perNode<=4?2:4) : (gpu.id==='b200'?10:(perNode<=4?4:8));
+  const nodeBase = gpu.form==='PCIe' ? 28000 : (perNode<=4? 45000 : 75000);
+  const netCost = nodes>1 ? nodes*(train?35000:8000) : 0;
+  const cost = installed*gpu.price + nodes*nodeBase + netCost;
+  return {role, gpu, gpusNeeded, perNode, nodes, installed, cores, ram, nvme, drives, fabric, net, nodeW, totalKW, ru: ru*nodes, cost};
+}
+
+function ragServer(m, p, concurrent){
+  const e = EMB[p.emb];
+  const corpusTok = p.docs*p.pages*p.tokPage;
+  const stride = Math.max(1, p.chunk - p.overlap);
+  const chunks = ceil(corpusTok/stride);
+  const vecGB = chunks*e.dim*4*1.6/1e9;           // HNSW float32 + graf
+  const textGB = chunks*p.chunk*4/1e9;
+  const rawGB = p.docs*p.docMB/1000;
+  const l40s = GPUS.find(g=>g.id==='l40s');
+  const embTokS = 0.35*l40s.bf16*1e12/(2*e.p*1e9);
+  const ingestH1 = corpusTok/embTokS/3600;
+  const embGpus = Math.min(4, Math.max(1, ceil(ingestH1/p.ingestH)) + (p.rerank && concurrent>200 ? 1 : 0));
+  const ram = roundUpTo(Math.max(128, (vecGB+textGB)*1.5 + 64), [128,256,384,512,768,1024,1536,2048]);
+  const storTB = Math.max(3.84, (rawGB*2 + (vecGB+textGB)*3)/1000*1.3);
+  return {e, corpusTok, chunks, vecGB, textGB, rawGB, embTokS, ingestH: corpusTok/(embTokS*embGpus)/3600, embGpus, ram,
+    stor: roundUpTo(storTB,[3.84,7.68,15.36,30.72,61.44,122.88,245.76]), cores: concurrent>500?64:32,
+    cost: embGpus*l40s.price + 22000, kw: (embGpus*l40s.tdp + 900)*1.1/1000};
+}
+
+/* ===================== HITUNG SEMUA ===================== */
+function readInputs(){
+  const m = getModel();
+  const serve = MODE==='inference'||MODE==='rag'||$('serveAfter').checked;
+  const rag = MODE==='rag';
+  const p = {
+    wB:num('wq'), kvB:num('kvq'), inTok:num('inTok'), outTok:Math.max(1,num('outTok')), tps:Math.max(1,num('tps')), ttft:num('ttft'),
+    util:num('util')/100, ha:$('ha').checked, users:num('users'), concPct:num('concPct'), growth:num('growth'),
+    docs:num('docs'), pages:num('pages'), tokPage:num('tokPage'), docMB:num('docMB'), chunk:num('chunk'), overlap:num('overlap'),
+    topk:num('topk'), ingestH:Math.max(1,num('ingestH')), emb:$('emb').value, rerank:$('rerank').checked,
+    method:$('ftMethod').value, samples:num('samples'), tokSample:num('tokSample'), epochs:num('epochs'), hours:Math.max(1,num('ftHours')),
+    seq:MODE==='training'?num('trSeq'):num('seqLen'), mbs:Math.max(1,num('mbs')), mfu:num('mfu')/100,
+    tokensB:num('trTok'), days:Math.max(1,num('trDays')), ckptKeep:num('ckptKeep'), fx:num('fx')
+  };
+  p.ragTok = rag ? p.topk*p.chunk : 0;
+  p.conc = Math.max(1, ceil(p.users*p.concPct/100*(1+p.growth/100)));
+  return {m, p, serve, rag};
+}
+
+function planFor(gpu, I){
+  const {m,p,serve,rag} = I;
+  const plan = {gpu, clusters:[], ok:true, issues:[]};
+  if(MODE==='finetune'){
+    const ft = sizeFinetune(gpu, m, p);
+    if(!ft){ plan.ok=false; plan.issues.push('Aktivasi tidak muat di VRAM; kecilkan sequence length/micro-batch.'); return plan; }
+    plan.ft = ft;
+    const ckptTB = (p.method==='full'? m.params*14*3 : m.params*2*2 + m.params*0.006*16*p.epochs)/1000;
+    plan.clusters.push(buildCluster('Klaster fine-tuning', gpu, ft.gpus, 'train', {localTB: ckptTB + m.params*2/1000*2 + 2}));
+    if(ft.hours > p.hours*1.01) plan.issues.push('Target jam fine-tuning tidak tercapai.');
+  }
+  if(MODE==='training'){
+    const tr = sizeTraining(gpu, m, p);
+    if(!tr){ plan.ok=false; plan.issues.push('Aktivasi tidak muat di VRAM GPU ini.'); return plan; }
+    plan.tr = tr;
+    plan.clusters.push(buildCluster('Klaster training', gpu, tr.gpus, 'train', {localTB: 7.68}));
+  }
+  if(serve){
+    const inf = sizeInference(gpu, m, p);
+    if(!inf){ plan.ok=false; plan.issues.push('Bobot model tidak muat bahkan dengan 32 GPU.'); return plan; }
+    plan.inf = inf;
+    if(!inf.feasible){ plan.ok=false; plan.issues.push(inf.meets? 'Target TTFT tidak tercapai.' : 'Target kecepatan token/detik per user tidak tercapai.'); }
+    plan.clusters.push(buildCluster('Klaster inference', gpu, inf.gpus, 'serve', {localTB: m.params*p.wB/1000*4 + 1}));
+  }
+  if(rag) plan.rag = ragServer(m, p, p.conc);
+  plan.cost = plan.clusters.reduce((s,c)=>s+c.cost,0) + (plan.rag?plan.rag.cost:0);
+  plan.kw = plan.clusters.reduce((s,c)=>s+c.totalKW,0) + (plan.rag?plan.rag.kw:0);
+  plan.gpus = plan.clusters.reduce((s,c)=>s+c.installed,0);
+  return plan;
+}
+
+function compute(){
+  const I = readInputs();
+  const all = GPUS.map(g => planFor(g, I));
+  const sel = $('gpuSel').value;
+  let chosen;
+  if(sel==='auto'){
+    const feas = all.filter(x=>x.ok && x.clusters.length);
+    chosen = (feas.length? feas : all.filter(x=>x.clusters.length)).sort((a,b)=>a.cost-b.cost)[0];
+  } else chosen = all.find(x=>x.gpu.id===sel);
+  return {I, all, chosen};
+}
+
+/* ===================== LAPORAN (dipakai layar, Excel, PDF) ===================== */
+function buildReport(){
+  const {I, all, chosen} = compute();
+  const {m,p,serve,rag} = I;
+  const R = {I, all, chosen, sections:[], bom:[], alts:[], notes:[], stack:[]};
+  const modeName = {inference:'Inference', rag:'RAG (Retrieval-Augmented Generation)', finetune:'Fine-tuning', training:'Pre-training'}[MODE];
+  R.modeName = modeName;
+
+  // Input
+  const inp = [['Customer / proyek', $('custName').value],['Jenis beban kerja', modeName],['Model', `${m.name} (${fmt(m.params,1)}B total, ${fmt(m.active,1)}B aktif)`]];
+  if(m.hf) inp.push(['Repo Hugging Face', 'huggingface.co/'+m.hf]);
+  if(serve){
+    inp.push(['Presisi bobot / KV cache', `${$('wq').selectedOptions[0].text} / ${$('kvq').selectedOptions[0].text}`],
+      ['Total pengguna', fmt(p.users)],['Konkurensi puncak', fmt(p.concPct,1)+' %'],['Cadangan pertumbuhan', fmt(p.growth)+' %'],
+      ['Sesi aktif bersamaan (dirancang)', fmt(p.conc)],['Token input / output', `${fmt(p.inTok)} / ${fmt(p.outTok)}`],
+      ['Target kecepatan per user', fmt(p.tps)+' token/dtk'],['Target TTFT', fmt(p.ttft,1)+' dtk'],['Redundansi N+1', p.ha?'Ya':'Tidak']);
+  }
+  if(rag) inp.push(['Korpus', `${fmt(p.docs)} dokumen × ${fmt(p.pages)} hal × ${fmt(p.tokPage)} token`],['Chunk / overlap / Top-K', `${p.chunk} / ${p.overlap} / ${p.topk}`],['Model embedding', EMB[p.emb].name],['Reranker', p.rerank?'Ya':'Tidak']);
+  if(MODE==='finetune') inp.push(['Metode', $('ftMethod').selectedOptions[0].text],['Dataset', `${fmt(p.samples)} sampel × ${fmt(p.tokSample)} token × ${p.epochs} epoch`],['Target selesai', fmt(p.hours)+' jam'],['Sequence length / micro-batch', `${p.seq} / ${p.mbs}`],['MFU', fmt(p.mfu*100)+' %']);
+  if(MODE==='training') inp.push(['Dataset', fmt(p.tokensB,1)+' miliar token'],['Target durasi', fmt(p.days)+' hari'],['Sequence length', p.seq],['MFU', fmt(p.mfu*100)+' %']);
+  inp.push(['Pemilihan GPU', $('gpuSel').value==='auto'?'Otomatis (biaya terendah)':chosen.gpu.name],['Kurs', 'Rp '+fmt(p.fx)+' / USD']);
+  R.sections.push({title:'Parameter input', rows:inp});
+
+  // Perhitungan
+  const c = chosen;
+  if(c.inf){
+    const x=c.inf;
+    R.sections.push({title:'Perhitungan inference', rows:[
+      ['Memori bobot model', fmtGB(x.W)],
+      ['KV cache per token (layer attention penuh)', fmt(x.kvpt/1024,1)+' KB'],
+      ['Konteks maks per sesi', fmt(x.ctxMax)+' token'+(rag?` (termasuk ${fmt(p.ragTok)} token RAG)`:'')],
+      ['KV cache per sesi', fmtGB(x.kvSeq/1e9)],
+      ['Tensor parallel per replika', x.tp+' GPU'],
+      ['Batch bersamaan per replika', fmt(x.b)+' sesi (maks memori '+fmt(x.maxB)+')'],
+      ['Jumlah replika', fmt(x.replicas)+(p.ha?' (termasuk 1 cadangan)':'')],
+      ['Total GPU inference', fmt(x.gpus)],
+      ['Kecepatan per user (estimasi)', fmt(x.tps,1)+' token/dtk'],
+      ['TTFT (estimasi)', fmt(x.ttft,2)+' dtk'],
+      ['Throughput agregat', fmt(x.aggTps)+' token/dtk'],
+      ['Kapasitas permintaan', fmt(x.reqPerMin)+' request/menit'],
+    ]});
+  }
+  if(c.rag){
+    const r=c.rag;
+    R.sections.push({title:'Perhitungan RAG', rows:[
+      ['Total token korpus', fmt(r.corpusTok/1e6,1)+' juta'],['Jumlah chunk / vektor', fmt(r.chunks)],
+      ['Indeks vektor (HNSW, RAM)', fmtGB(r.vecGB)],['Teks chunk + metadata', fmtGB(r.textGB)],['Dokumen mentah', fmtGB(r.rawGB)],
+      ['GPU embedding/reranker', r.embGpus+' × NVIDIA L40S 48GB'],['Waktu indexing awal', fmt(r.ingestH,1)+' jam'],
+      ['Tambahan token prompt per query', fmt(p.ragTok)]
+    ]});
+  }
+  if(c.ft){
+    const f=c.ft;
+    R.sections.push({title:'Perhitungan fine-tuning', rows:[
+      ['Skema memori', f.label],['State model + optimizer (total)', fmtGB(f.states)],['Aktivasi per GPU', fmtGB(f.act)],
+      ['GPU minimum (memori)', fmt(f.nMem)],['Total token dilatih', fmt(f.tokens/1e6,1)+' juta'],['Total komputasi', fmt(f.flopsTotal/1e18,1)+' EFLOP'],
+      ['GPU direkomendasikan', fmt(f.gpus)],['Estimasi durasi', fmt(f.hours,1)+' jam'],['Pemakaian VRAM per GPU', fmtGB(f.perGpuMem)+' dari '+c.gpu.mem+' GB']
+    ]});
+  }
+  if(c.tr){
+    const t=c.tr;
+    R.sections.push({title:'Perhitungan pre-training', rows:[
+      ['State model + optimizer (18 byte/param)', fmtGB(t.states)],['GPU minimum (memori)', fmt(t.nMem)],
+      ['Total komputasi (6·N·D)', fmt(t.flopsTotal/1e21,2)+' ZFLOP'],['GPU direkomendasikan', fmt(t.gpus)],
+      ['Estimasi durasi', fmt(t.days,1)+' hari'],['Token optimal Chinchilla (20 × param)', fmt(t.chinchilla,0)+' miliar'],
+      ['Pemakaian VRAM per GPU', fmtGB(t.perGpuMem)+' dari '+c.gpu.mem+' GB']
+    ]});
+  }
+
+  // BOM
+  for(const k of c.clusters){
+    R.bom.push({title:`${k.role}: ${k.nodes} × server ${k.perNode}-GPU`, rows:[
+      ['GPU', `${k.perNode} × ${k.gpu.name} per node (${k.installed} total, ${fmt(k.installed*k.gpu.mem)} GB VRAM)`],
+      ['Interkoneksi GPU', k.fabric],
+      ['CPU', `2 × ${k.cores/2} core (AMD EPYC 9005 / Intel Xeon 6)`],
+      ['RAM sistem', `${fmt(k.ram)} GB DDR5 ECC per node`],
+      ['Storage lokal', `2 × 960 GB NVMe (OS, RAID-1) + ${k.drives} NVMe data`],
+      ['Jaringan', k.net],
+      ['Daya per node', fmt(k.nodeW/1000,1)+' kW (PSU redundan)'],
+      ['Rack', `${k.ru} U total`],
+      ['Estimasi biaya', `${usd(k.cost)} (~${idr(k.cost*p.fx)})`]
+    ]});
+  }
+  if(c.rag){
+    const r=c.rag;
+    R.bom.push({title:'Server RAG: embedding, reranker & vector DB', rows:[
+      ['GPU', `${r.embGpus} × NVIDIA L40S 48GB`],['CPU', `2 × ${r.cores/2} core`],['RAM sistem', `${fmt(r.ram)} GB DDR5 ECC`],
+      ['Storage', `${fmt(r.stor,2)} TB NVMe (RAID-10) untuk dokumen + indeks`],['Jaringan', '2 × 25/100 GbE'],
+      ['Daya', fmt(r.kw,1)+' kW'],['Estimasi biaya', `${usd(r.cost)} (~${idr(r.cost*p.fx)})`]
+    ]});
+  }
+
+  // Alternatif
+  for(const a of all){
+    if(!a.clusters.length){ R.alts.push({gpu:a.gpu, na:true, issue:a.issues[0]||'Tidak memungkinkan'}); continue; }
+    R.alts.push({gpu:a.gpu, gpus:a.gpus, nodes:a.clusters.reduce((s,k)=>s+k.nodes,0), kw:a.kw, cost:a.cost, ok:a.ok, issue:a.issues.join(' '), sel:a===c});
+  }
+
+  // Catatan & stack
+  R.notes = [
+    'Angka adalah estimasi teknis untuk tahap pre-sales. Validasi dengan benchmark (vLLM/SGLang benchmark, MLPerf) pada model dan data customer.',
+    'Harga GPU dan server bersifat indikatif dan sangat bergantung pada vendor, kurs, dan ketersediaan. Belum termasuk PPN, lisensi software, instalasi, rak, UPS, dan pendinginan.',
+    'Inference memakai model bandwidth memori + komputasi dengan efisiensi 70% bandwidth dan 45% FLOPs; KV cache dihitung untuk konteks maksimum tiap sesi aktif.',
+    'Fine-tuning/training memakai aturan 6·N·D (full) atau ~4·N·D (LoRA), dengan MFU sesuai input dan penalti komunikasi antar GPU/node.',
+  ];
+  if(m.mla) R.notes.push('Model ini memakai KV laten/terkompresi (MLA atau sejenisnya) sehingga KV cache jauh lebih kecil dibanding model GQA.');
+  if((m.kvLayers ?? m.layers) < m.layers) R.notes.push(`Model hybrid / sliding window: hanya ${fmt(m.kvLayers,1)} dari ${m.layers} layer menyimpan KV untuk seluruh konteks${m.swLayers?`, ${m.swLayers} layer lain hanya ${fmt(m.swWindow)} token terakhir`:''}.`);
+  if(m.g==='trend') R.notes.push(`Daftar model mengikuti trending Hugging Face per ${HF_DATE}; arsitektur dibaca dari config.json resmi tiap repo.`);
+  if(m.active<m.params) R.notes.push('Model MoE: seluruh parameter harus muat di VRAM, tetapi komputasi per token hanya memakai parameter aktif.');
+  if(serve && p.wB>=4) R.notes.push('Bobot FP32 butuh 2× VRAM dan bandwidth dibanding BF16 dengan kualitas output yang praktis sama; untuk produksi umumnya dipakai BF16 atau FP8.');
+  if(chosen.gpu.id==='a100' && p.wB<=1) R.notes.push('A100 tidak mendukung FP8 secara native; perhitungan memakai throughput BF16/INT8.');
+  if(chosen.gpu.form==='PCIe' && (MODE==='training' || (c.ft && c.ft.gpus>8))) R.notes.push('GPU PCIe tanpa NVLink kurang efisien untuk training multi-node; pertimbangkan HGX/SXM.');
+  for(const s of chosen.issues) R.notes.unshift('Perhatian: '+s);
+
+  R.stack = [['Serving LLM','vLLM, SGLang, atau NVIDIA NIM / TensorRT-LLM']];
+  if(rag) R.stack.push(['RAG','Qdrant / Milvus / pgvector, LlamaIndex atau LangChain, TEI untuk embedding']);
+  if(MODE==='finetune') R.stack.push(['Fine-tuning','LLaMA-Factory, Axolotl, Unsloth, atau NeMo; DeepSpeed ZeRO / FSDP']);
+  if(MODE==='training') R.stack.push(['Training','Megatron-LM / NVIDIA NeMo, DeepSpeed, PyTorch FSDP; Slurm']);
+  R.stack.push(['Orkestrasi','Kubernetes + NVIDIA GPU Operator (atau AMD GPU Operator), Run:ai opsional'],['Observabilitas','DCGM Exporter, Prometheus, Grafana']);
+
+  // Headline
+  const totalNodes = c.clusters.reduce((s,k)=>s+k.nodes,0) + (c.rag?1:0);
+  const multi = c.clusters.length>1 || !!c.rag;
+  R.headline = c.clusters.map(k=>`${multi?k.role.replace('Klaster ','').replace(/^./,s=>s.toUpperCase())+': ':''}${k.nodes} × server ${k.perNode}-GPU ${k.gpu.name.replace(/^NVIDIA |^AMD Instinct /,'')}`).join(' + ') + (c.rag?' + 1 server RAG':'');
+  R.kpi = {gpus:c.gpus + (c.rag?c.rag.embGpus:0), vram:c.clusters.reduce((s,k)=>s+k.installed*k.gpu.mem,0), nodes:totalNodes,
+    kw:c.kw, ru:c.clusters.reduce((s,k)=>s+k.ru,0)+(c.rag?2:0), cost:c.cost};
+  return R;
+}
+
+/* ===================== RENDER ===================== */
+function kv(rows){ return `<div class="tbl"><table><tbody>${rows.map(r=>`<tr><td class="k">${esc(r[0])}</td><td class="v">${esc(String(r[1]))}</td></tr>`).join('')}</tbody></table></div>`; }
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+
+let LAST;
+function render(){
+  const R = buildReport(); LAST = R;
+  const c = R.chosen, p = R.I.p;
+  const pills = [];
+  if(c.inf){ pills.push([c.inf.tps>=p.tps?'good':'bad', `${fmt(c.inf.tps,0)} tok/dtk per user`]); pills.push([c.inf.ttftOk?'good':'warn', `TTFT ${fmt(c.inf.ttft,1)} dtk`]); pills.push(['', `${fmt(p.conc)} sesi bersamaan`]); }
+  if(c.ft) pills.push([c.ft.hours<=p.hours*1.01?'good':'bad', `Fine-tune ±${fmt(c.ft.hours,1)} jam`]);
+  if(c.tr) pills.push([c.tr.days<=p.days*1.01?'good':'bad', `Training ±${fmt(c.tr.days,1)} hari`]);
+  if(c.rag) pills.push(['', `${fmt(c.rag.chunks)} vektor`]);
+  pills.push([c.ok?'good':'bad', c.ok?'Target terpenuhi':'Target belum terpenuhi']);
+
+  let memBar = '';
+  if(c.inf){
+    const x=c.inf, tot=x.perReplicaMem;
+    const seg = v => (v/tot*100).toFixed(1)+'%';
+    const free = Math.max(0, tot - x.W - x.kvUsed - x.overhead);
+    memBar = `<div class="card"><h2>Komposisi VRAM per replika inference</h2><p class="desc">${x.tp} × ${c.gpu.mem} GB = ${fmt(tot)} GB per replika, melayani hingga ${x.b} sesi bersamaan.</p>
+      <div class="bar" role="img" aria-label="Komposisi memori"><span style="width:${seg(x.W)};background:var(--seg1)"></span><span style="width:${seg(x.kvUsed)};background:var(--seg2)"></span><span style="width:${seg(x.overhead)};background:var(--seg3)"></span></div>
+      <div class="legend"><span><i style="background:var(--seg1)"></i>Bobot ${fmtGB(x.W)}</span><span><i style="background:var(--seg2)"></i>KV cache ${fmtGB(x.kvUsed)}</span><span><i style="background:var(--seg3)"></i>Runtime ${fmtGB(x.overhead)}</span><span><i style="background:var(--surface-2);border:1px solid var(--line)"></i>Sisa ${fmtGB(free)}</span></div></div>`;
+  }
+
+  const altRows = R.alts.map(a => a.na
+    ? `<tr class="na"><td>${esc(a.gpu.name)}</td><td colspan="4">${esc(a.issue)}</td></tr>`
+    : `<tr class="${a.sel?'sel':''}"><td>${esc(a.gpu.name)}${a.sel?' <span class="pill good">dipilih</span>':''}${!a.ok?' <span class="pill warn">di bawah target</span>':''}</td><td class="n">${a.gpus}</td><td class="n">${a.nodes}</td><td class="n">${fmt(a.kw,1)} kW</td><td class="n">${usd(a.cost)}</td></tr>`).join('');
+
+  $('results').innerHTML = `
+    <section class="hero">
+      <div class="eyebrow">Rekomendasi · ${esc(R.modeName)} · ${esc(R.I.m.name)}</div>
+      <div class="headline">${esc(R.headline).replace(/(\d+) × server/g,'<em>$1 ×</em> server')}</div>
+      <div class="kpis">
+        <div class="kpi"><div class="v">${R.kpi.gpus}</div><div class="l">Total GPU</div></div>
+        <div class="kpi"><div class="v">${fmtGB(R.kpi.vram)}</div><div class="l">Total VRAM</div></div>
+        <div class="kpi"><div class="v">${R.kpi.nodes}</div><div class="l">Jumlah server</div></div>
+        <div class="kpi"><div class="v">${fmt(R.kpi.kw,1)} kW</div><div class="l">Daya IT · ${fmt(R.kpi.kw*3412)} BTU/jam</div></div>
+        <div class="kpi"><div class="v">${R.kpi.ru} U</div><div class="l">Ruang rak</div></div>
+        <div class="kpi"><div class="v">${usd(R.kpi.cost)}</div><div class="l">Estimasi CAPEX · ${idr(R.kpi.cost*p.fx)}</div></div>
+      </div>
+      <div class="pills">${pills.map(([k,t])=>`<span class="pill ${k}">${esc(t)}</span>`).join('')}</div>
+    </section>
+
+    <section class="two">${R.bom.map(b=>`<div class="card"><h2>${esc(b.title)}</h2><p class="desc">Spesifikasi per node</p>${kv(b.rows)}</div>`).join('')}</section>
+
+    ${memBar}
+
+    <section class="two">${R.sections.filter(s=>s.title!=='Parameter input').map(s=>`<div class="card"><h2>${esc(s.title)}</h2>${kv(s.rows)}</div>`).join('')}</section>
+
+    <section class="card"><h2>Perbandingan GPU alternatif</h2><p class="desc">Konfigurasi yang sama dihitung untuk tiap GPU. Baris tersorot adalah pilihan saat ini.</p>
+      <div class="tbl"><table><thead><tr><th>GPU</th><th class="n">GPU</th><th class="n">Server</th><th class="n">Daya</th><th class="n">Estimasi biaya</th></tr></thead><tbody>${altRows}</tbody></table></div></section>
+
+    <section class="card"><h2>Software stack yang disarankan</h2><div class="sw">${R.stack.map(s=>`<div><b>${esc(s[0])}</b>${esc(s[1])}</div>`).join('')}</div></section>
+
+    <section class="card"><h2>Asumsi &amp; catatan</h2><ul class="notes">${R.notes.map(n=>`<li>${esc(n)}</li>`).join('')}</ul></section>`;
+}
+
+/* ===================== LINK HUGGING FACE → PARAMETER ===================== */
+// Ubah config.json Hugging Face menjadi parameter arsitektur untuk kalkulator
+function parseHFConfig(raw, totalGiven, repoId){
+  const top = raw || {};
+  const c = Object.assign({}, top, top.text_config || top.llm_config || top.language_config || top.thinker_config?.text_config || {});
+  const pick = (...k) => { for(const x of k){ const v = c[x]; if(v!==undefined && v!==null && v!=='') return v; } return undefined; };
+  const L = pick('num_hidden_layers','n_layer','num_layers','n_layers');
+  const H = pick('hidden_size','n_embd','d_model','dim');
+  if(!L || !H) throw new Error('config.json tidak memuat num_hidden_layers / hidden_size');
+  const heads = pick('num_attention_heads','n_head','n_heads') || Math.round(H/128);
+  const kv = pick('num_key_value_heads','multi_query_group_num','n_kv_heads','num_kv_heads') || heads;
+  const hd = pick('head_dim','attention_head_dim') || Math.round(H/heads);
+  const vocab = pick('vocab_size','padded_vocab_size') || 128000;
+  const inter = pick('intermediate_size','ffn_hidden_size','n_inner') || 4*H;
+  const tie = !!pick('tie_word_embeddings');
+  // jenis layer: attention penuh vs sliding window vs linear/SSM (tanpa KV yang tumbuh)
+  let full = L, sw = 0;
+  const window = pick('sliding_window','sliding_window_size','attention_chunk_size') || 0;
+  const lt = pick('layer_types');
+  const list = v => Array.isArray(v) ? v : (typeof v==='string' && v.includes(',') ? v.split(',').map(Number) : null);
+  const hyb = list(pick('hybrid_layer_pattern'));
+  const comp = list(pick('compress_ratios'));
+  if(comp && comp.length){                       // DeepSeek-V4: KV dikompresi per layer + jendela lokal
+    full = comp.slice(0, L).reduce((s,r)=>s + 1/Math.max(1,r), 0); sw = L;
+  } else if(hyb && hyb.length){
+    full = hyb.filter(x=>+x===0).length; sw = hyb.filter(x=>+x!==0).length;
+  } else if(Array.isArray(lt) && lt.length){
+    full = lt.filter(t=>/full|global|^attention$/i.test(t)).length;
+    sw = lt.filter(t=>/slid|local/i.test(t)).length;
+    if(!full && !sw) full = L;
+  } else if(pick('full_attention_interval')){
+    full = Math.ceil(L/pick('full_attention_interval'));
+  } else if(typeof pick('hybrid_override_pattern')==='string'){
+    full = (pick('hybrid_override_pattern').match(/\*/g)||[]).length || L;
+  } else if(pick('sliding_window_pattern')){
+    const p = pick('sliding_window_pattern'); full = Math.ceil(L/p); sw = L-full;
+  } else if(Array.isArray(pick('full_attn_idxs'))){
+    full = pick('full_attn_idxs').length;
+  }
+  if(!window){ sw = 0; full = Math.max(full, 1); }
+  const kvLora = pick('kv_lora_rank'), rope = pick('qk_rope_head_dim') || 0;
+  const mla = !!kvLora || !!(comp && kv===1);
+  // MoE
+  const E = pick('num_experts','n_routed_experts','num_local_experts','moe_num_experts','num_routed_experts') || 0;
+  const topk = pick('num_experts_per_tok','moe_topk','num_experts_per_token','top_k_experts','moe_k') || 0;
+  const shared = pick('n_shared_experts','num_shared_experts') ?? (pick('shared_expert_intermediate_size')?1:0);
+  const moeInter = pick('moe_intermediate_size','expert_intermediate_size') || inter;
+  const sharedInter = pick('shared_expert_intermediate_size') || moeInter;
+  const denseFirst = pick('first_k_dense_replace','num_dense_layers') || 0;
+  const moeLayers = E ? L - denseFirst : 0;
+  // estimasi jumlah parameter dari arsitektur
+  let attn;
+  if(kvLora){
+    const nope = pick('qk_nope_head_dim')||128, vh = pick('v_head_dim')||128, ql = pick('q_lora_rank');
+    attn = (ql? H*ql + ql*heads*(nope+rope) : H*heads*(nope+rope)) + H*(kvLora+rope) + kvLora*heads*(nope+vh) + heads*vh*H;
+  } else attn = H*hd*(heads+2*kv) + heads*hd*H;
+  const expertP = 3*H*moeInter;
+  const totalEst = vocab*H*(tie?1:2) + L*attn + (L-moeLayers)*3*H*inter + moeLayers*(E*expertP + shared*3*H*sharedInter + H*E);
+  const activeEst = totalEst - moeLayers*Math.max(0,E-topk)*expertP;
+  const total = totalGiven || totalEst;
+  let active = Math.min(total, activeEst*(total/totalEst));
+  const named = /-A(\d+(?:\.\d+)?)B(?![a-z0-9])/i.exec(repoId||'');   // mis. "Qwen3-30B-A3B" -> 3B aktif
+  if(named && E) active = parseFloat(named[1])*1e9;
+  return {
+    params:+(total/1e9).toFixed(2), active:+(active/1e9).toFixed(2), layers:L, hidden:H,
+    kvHeads: mla?1:kv, headDim: kvLora?(kvLora+rope):hd, mla, kvLayers:+full.toFixed(2), swLayers:sw, swWindow:window||0,
+    experts:E, topk, type: top.model_type || c.model_type || '?', estimated: !totalGiven
+  };
+}
+function repoFromInput(s){
+  s = (s||'').trim();
+  const m = s.match(/huggingface\.co\/(?:models\/)?([\w.\-]+\/[\w.\-]+)/i) || s.match(/^([\w.\-]+\/[\w.\-]+)$/);
+  return m ? m[1].replace(/\.git$/,'') : '';
+}
+function hfMsg(html, cls){ const el=$('hfMsg'); el.hidden=false; el.className='hfmsg '+(cls||''); el.innerHTML=html; }
+function fillCustom(a, repo){
+  $('cParams').value=a.params; $('cActive').value=a.active; $('cLayers').value=a.layers; $('cHidden').value=a.hidden;
+  $('cAttn').value=a.mla?'mla':'gqa'; $('cKvHeads').value=a.kvHeads; $('cHeadDim').value=a.headDim;
+  $('cKvLayers').value=a.kvLayers ?? a.layers; $('cSwLayers').value=a.swLayers||0; $('cSwWin').value=a.swWindow||0;
+  CUSTOM_HF = repo||'';
+  update();
+}
+async function hfLookup(){
+  const repo = repoFromInput($('hfUrl').value);
+  if(!repo){ hfMsg('Format link belum dikenali. Contoh: <span class="mono">https://huggingface.co/Qwen/Qwen3-14B</span> atau <span class="mono">Qwen/Qwen3-14B</span>.', 'warn'); return; }
+  const known = MODELS.find(m=>m.hf && m.hf.toLowerCase()===repo.toLowerCase());
+  if(known){ fillCustom(known, known.hf); $('hfPasteWrap').hidden=true; hfMsg(`Terisi dari katalog bawaan: <b>${esc(known.name)}</b>.`, 'ok'); return; }
+  hfMsg('Mengambil config.json dari Hugging Face…');
+  $('hfGo').disabled = true;
+  try{
+    const ctl = new AbortController(); const t = setTimeout(()=>ctl.abort(), 8000);
+    const [meta, cfg] = await Promise.all([
+      fetch(`https://huggingface.co/api/models/${repo}?expand[]=safetensors`, {signal:ctl.signal}).then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch(`https://huggingface.co/${repo}/resolve/main/config.json`, {signal:ctl.signal}).then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+    ]);
+    clearTimeout(t);
+    const a = parseHFConfig(cfg, meta?.safetensors?.total, repo);
+    fillCustom(a, repo);
+    $('hfPasteWrap').hidden = true;
+    hfMsg(`Terisi otomatis dari <b>${esc(repo)}</b> (${esc(a.type)}${a.experts?`, MoE ${a.experts} expert`:''}). ${a.estimated?'Total parameter diestimasi dari arsitektur.':'Total parameter dari metadata safetensors.'} Periksa kembali sebelum dipakai.`, 'ok');
+  }catch(e){
+    CUSTOM_HF = repo;
+    const gated = /HTTP 40[13]/.test(e.message);
+    hfMsg(`${gated?'Model ini gated (perlu login dan persetujuan lisensi di Hugging Face).':'Halaman ini tidak dapat menghubungi huggingface.co secara langsung.'} Buka <a href="https://huggingface.co/${esc(repo)}/raw/main/config.json" target="_blank" rel="noopener">config.json ${esc(repo)}</a>, salin seluruh isinya, lalu tempel di kotak di bawah.`, 'warn');
+    $('hfPasteWrap').hidden = false;
+    update();
+  }finally{ $('hfGo').disabled = false; }
+}
+function hfParsePasted(){
+  try{
+    const cfg = JSON.parse($('hfPaste').value);
+    const repo = repoFromInput($('hfUrl').value) || CUSTOM_HF;
+    const a = parseHFConfig(cfg, null, repo);
+    fillCustom(a, repo);
+    hfMsg(`config.json terbaca (${esc(a.type)}${a.experts?`, MoE ${a.experts} expert`:''}). Total parameter ${fmt(a.params,1)}B diestimasi dari arsitektur; ganti dengan angka "Model size" di halaman model bila berbeda.`, 'ok');
+  }catch(e){ hfMsg('Isi yang ditempel belum bisa dibaca sebagai config.json: '+esc(e.message), 'warn'); }
+}
+
+/* ===================== UI WIRING ===================== */
+function applyMode(){
+  document.querySelectorAll('.seg button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.mode===MODE));
+  $('modeHint').textContent = MODE_HINT[MODE];
+  const trainish = MODE==='finetune'||MODE==='training';
+  const serve = !trainish || $('serveAfter').checked;
+  document.querySelectorAll('[data-mode-only]').forEach(el=>el.hidden = el.dataset.modeOnly!==MODE);
+  document.querySelectorAll('[data-serve]').forEach(el=>el.hidden = !serve);
+  document.querySelectorAll('[data-train]').forEach(el=>el.hidden = !trainish);
+  document.querySelectorAll('[data-train-serve]').forEach(el=>el.hidden = !trainish);
+  document.querySelectorAll('[data-custom]').forEach(el=>el.hidden = $('model').value!=='custom');
+  const m = getModel();
+  const attnTxt = m.mla ? 'MLA/latent' : 'GQA';
+  const hyb = (m.kvLayers ?? m.layers) < m.layers ? ` · ${fmt(m.kvLayers,0)}/${m.layers} layer KV penuh` : '';
+  $('modelInfo').innerHTML = m ? `${fmt(m.params,1)}B parameter${m.active<m.params?` (${fmt(m.active,1)}B aktif)`:''} · ${m.layers} layer · hidden ${m.hidden} · ${attnTxt}${hyb} · KV ${fmt(kvPerToken(m, num('kvq')||2)/1024,1)} KB/token`
+    + (m.hf ? ` · <a href="https://huggingface.co/${esc(m.hf)}" target="_blank" rel="noopener">${esc(m.hf)}</a>` : '') : '';
+}
+
+function init(){
+  const grp = (g,label) => `<optgroup label="${label}">` + MODELS.filter(m=>m.g===g).map(m=>`<option value="${m.id}">${m.name}</option>`).join('') + '</optgroup>';
+  $('model').innerHTML = grp('trend', `Trending di Hugging Face (${HF_DATE})`) + grp('pop', 'Populer & enterprise') + grp('custom', 'Lainnya');
+  $('model').value = 'qwen38-27b';
+  $('hfGo').addEventListener('click', hfLookup);
+  $('hfUrl').addEventListener('keydown', e=>{ if(e.key==='Enter'){ e.preventDefault(); hfLookup(); } });
+  $('hfParse').addEventListener('click', hfParsePasted);
+  $('gpuSel').innerHTML = `<option value="auto">Otomatis (biaya terendah)</option>` + GPUS.map(g=>`<option value="${g.id}">${g.name}</option>`).join('');
+  document.querySelectorAll('.seg button').forEach(b=>b.addEventListener('click',()=>{
+    MODE=b.dataset.mode;
+    if(MODE==='finetune'){ $('serveAfter').checked = true; if($('model').value!=='custom' && getModel().params>40) $('model').value='qwen3-8b'; }
+    if(MODE==='training'){ $('serveAfter').checked = false; if($('model').value!=='custom') $('model').value='qwen3-8b'; }
+    update();
+  }));
+  $('usecase').addEventListener('change',()=>{ const u=USECASE[$('usecase').value]; if(u){ for(const k in u) $(k).value=u[k]; } update(); });
+  ['inTok','outTok','tps','ttft'].forEach(id=>$(id).addEventListener('input',()=>{$('usecase').value='custom';}));
+  $('form').addEventListener('input', update);
+  $('form').addEventListener('change', update);
+  $('btnXlsx').addEventListener('click', exportXlsx);
+  $('btnPdf').addEventListener('click', exportPdf);
+  update();
+}
+function update(){ applyMode(); try{ render(); }catch(e){ $('results').innerHTML = `<div class="card"><h2>Input belum valid</h2><p class="desc">${esc(e.message)}</p></div>`; console.error(e); } }
+
+/* ===================== EXPORT ===================== */
+const stamp = () => new Date().toISOString().slice(0,10);
+const fileBase = () => `Sizing-Server-AI_${($('custName').value||'customer').replace(/[^\w\- ]+/g,'').trim().replace(/\s+/g,'-').slice(0,40)}_${stamp()}`;
+function setStatus(t){ $('status').textContent = t; }
+
+async function saveFile(filename, data, mime){
+  let dl = null;
+  try{ dl = window.claude?.use ? await window.claude.use('downloads') : null; }catch(e){ dl = null; }
+  if(dl){
+    try{ await dl.save({filename, data}); setStatus('Tersimpan: '+filename); }
+    catch(e){ setStatus(e && e.code==='declined' ? 'Penyimpanan dibatalkan.' : 'Gagal menyimpan file ('+(e&&e.code||'error')+').'); }
+    return;
+  }
+  // di luar viewer Claude (file dibuka langsung di browser)
+  const url = URL.createObjectURL(new Blob([data],{type:mime}));
+  const a = document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+  setStatus('Diunduh: '+filename);
+}
+
+function exportXlsx(){
+  if(!window.XLSX){ setStatus('Library Excel belum termuat.'); return; }
+  const R = LAST || buildReport(); const p=R.I.p;
+  const wb = XLSX.utils.book_new();
+  const sum = [['KALKULATOR SIZING SERVER AI ON-PREMISE'],['Tanggal', stamp()],['Customer', $('custName').value],['Beban kerja', R.modeName],['Model', R.I.m.name],[],
+    ['REKOMENDASI', R.headline],['Total GPU', R.kpi.gpus],['Total VRAM (GB)', R.kpi.vram],['Jumlah server', R.kpi.nodes],['Daya IT (kW)', +R.kpi.kw.toFixed(2)],
+    ['Pendinginan (BTU/jam)', Math.round(R.kpi.kw*3412)],['Ruang rak (U)', R.kpi.ru],['Estimasi CAPEX (USD)', Math.round(R.kpi.cost)],['Estimasi CAPEX (IDR)', Math.round(R.kpi.cost*p.fx)],[]];
+  for(const b of R.bom){ sum.push([b.title.toUpperCase()]); b.rows.forEach(r=>sum.push(r)); sum.push([]); }
+  const ws1 = XLSX.utils.aoa_to_sheet(sum); ws1['!cols']=[{wch:38},{wch:90}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Rekomendasi');
+
+  const calc = [];
+  for(const s of R.sections){ calc.push([s.title.toUpperCase()]); s.rows.forEach(r=>calc.push([r[0], String(r[1])])); calc.push([]); }
+  const ws2 = XLSX.utils.aoa_to_sheet(calc); ws2['!cols']=[{wch:40},{wch:70}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Input & Perhitungan');
+
+  const alt = [['GPU','Jumlah GPU','Jumlah server','Daya (kW)','Estimasi biaya (USD)','Estimasi biaya (IDR)','Status']];
+  R.alts.forEach(a=> alt.push(a.na ? [a.gpu.name,'','','','','',a.issue] : [a.gpu.name,a.gpus,a.nodes,+a.kw.toFixed(2),Math.round(a.cost),Math.round(a.cost*p.fx),(a.sel?'DIPILIH. ':'')+(a.ok?'Memenuhi target':'Di bawah target: '+a.issue)]));
+  const ws3 = XLSX.utils.aoa_to_sheet(alt); ws3['!cols']=[{wch:38},{wch:12},{wch:14},{wch:10},{wch:20},{wch:22},{wch:50}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Alternatif GPU');
+
+  const gs = [['GPU','VRAM (GB)','Bandwidth (TB/s)','BF16 dense (TFLOPS)','FP8 dense (TFLOPS)','TDP (W)','Form factor','Harga indikatif (USD)']];
+  GPUS.forEach(g=>gs.push([g.name,g.mem,g.bw,g.bf16,g.fp8,g.tdp,g.form,g.price]));
+  const ws4 = XLSX.utils.aoa_to_sheet(gs); ws4['!cols']=[{wch:38},{wch:10},{wch:16},{wch:18},{wch:18},{wch:9},{wch:12},{wch:20}];
+  XLSX.utils.book_append_sheet(wb, ws4, 'Referensi GPU');
+
+  const ws5 = XLSX.utils.aoa_to_sheet([['SOFTWARE STACK'],...R.stack,[],['ASUMSI & CATATAN'],...R.notes.map(n=>[n])]); ws5['!cols']=[{wch:30},{wch:100}];
+  XLSX.utils.book_append_sheet(wb, ws5, 'Catatan');
+
+  const buf = XLSX.write(wb, {bookType:'xlsx', type:'array'});
+  saveFile(fileBase()+'.xlsx', new Uint8Array(buf), 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+}
+
+const pdfSafe = s => String(s).replace(/×/g,'x').replace(/·/g,'-').replace(/±/g,'+/-').replace(/–|—/g,'-').replace(/…/g,'...').replace(/[^\x00-\xFF]/g,'');
+function exportPdf(){
+  if(!window.jspdf){ setStatus('Library PDF belum termuat.'); return; }
+  const R = LAST || buildReport(); const p=R.I.p;
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:'pt', format:'a4'});
+  const W = doc.internal.pageSize.getWidth(), M = 40;
+  const teal=[11,110,105], ink=[20,26,33], grey=[90,102,115];
+  doc.setFillColor(...teal); doc.rect(0,0,W,6,'F');
+  doc.setTextColor(...ink); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+  doc.text('Rekomendasi Spesifikasi Server AI On-Premise', M, 44);
+  doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(...grey);
+  doc.text(pdfSafe(`${$('custName').value}  |  ${R.modeName}  |  ${R.I.m.name}  |  ${stamp()}`), M, 62);
+  doc.setTextColor(...ink); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+  const hl = doc.splitTextToSize(pdfSafe(R.headline), W-2*M); doc.text(hl, M, 88);
+  let y = 88 + hl.length*15 + 4;
+  doc.autoTable({startY:y, margin:{left:M,right:M}, theme:'grid', styles:{fontSize:9,halign:'center',cellPadding:6},
+    headStyles:{fillColor:teal}, head:[['Total GPU','Total VRAM','Server','Daya IT','Rak','CAPEX (USD)','CAPEX (IDR)']],
+    body:[[R.kpi.gpus, pdfSafe(fmtGB(R.kpi.vram)), R.kpi.nodes, fmt(R.kpi.kw,1)+' kW', R.kpi.ru+' U', pdfSafe(usd(R.kpi.cost)), pdfSafe(idr(R.kpi.cost*p.fx))]]});
+  const sect = (title, rows) => {
+    doc.autoTable({startY:doc.lastAutoTable.finalY+16, margin:{left:M,right:M}, theme:'striped', styles:{fontSize:8.5,cellPadding:4},
+      headStyles:{fillColor:[233,237,241],textColor:ink,fontStyle:'bold'}, columnStyles:{0:{cellWidth:180,textColor:grey}},
+      head:[[pdfSafe(title),'']], body:rows.map(r=>[pdfSafe(r[0]), pdfSafe(r[1])])});
+  };
+  R.bom.forEach(b=>sect(b.title, b.rows));
+  R.sections.forEach(s=>sect(s.title, s.rows));
+  doc.autoTable({startY:doc.lastAutoTable.finalY+16, margin:{left:M,right:M}, theme:'grid', styles:{fontSize:8.5,cellPadding:4},
+    headStyles:{fillColor:teal}, head:[['Alternatif GPU','GPU','Server','Daya','Biaya (USD)','Status']],
+    body:R.alts.map(a=>a.na?[pdfSafe(a.gpu.name),'-','-','-','-',pdfSafe(a.issue)]:[pdfSafe(a.gpu.name),a.gpus,a.nodes,fmt(a.kw,1)+' kW',pdfSafe(usd(a.cost)),(a.sel?'Dipilih. ':'')+(a.ok?'OK':'Di bawah target')]),
+    didParseCell: d => { if(d.section==='body' && R.alts[d.row.index]?.sel) d.cell.styles.fillColor=[214,236,234]; }});
+  sect('Software stack', R.stack);
+  sect('Asumsi & catatan', R.notes.map((n,i)=>[String(i+1), n]));
+  const pages = doc.internal.getNumberOfPages();
+  for(let i=1;i<=pages;i++){ doc.setPage(i); doc.setFontSize(8); doc.setTextColor(...grey);
+    doc.text(`Estimasi indikatif - validasi dengan vendor dan benchmark.   Hal ${i}/${pages}`, M, doc.internal.pageSize.getHeight()-20); }
+  saveFile(fileBase()+'.pdf', doc.output('arraybuffer'), 'application/pdf');
+}
+
+init();
+</script>
+
+</body>
+</html>
