@@ -385,10 +385,10 @@ const GPUS = [
   {id:'mi300x', name:'AMD Instinct MI300X 192GB',         mem:192, bw:5.3,  bf16:1307, fp8:2615, tdp:750,  price:20000, form:'OAM',  fast:true},
   {id:'mi350x', name:'AMD Instinct MI350X 288GB',         mem:288, bw:8.0,  bf16:2300, fp8:4600, tdp:1000, price:25000, form:'OAM',  fast:true},
 ];
-// Katalog model: diambil dari Hugging Face (trending text-generation & image-text-to-text, 3 Nov 2026).
+// Katalog model: diambil dari Hugging Face (trending text-generation & image-text-to-text, 4 Nov 2026).
 // Arsitektur dibaca dari config.json tiap repo; total parameter dari metadata safetensors.
 // kvLayers = layer attention penuh (KV tumbuh dengan konteks); swLayers/swWindow = layer sliding window.
-const HF_DATE = '3 Nov 2026';
+const HF_DATE = '4 Nov 2026';
 const MODELS = [
   // --- trending
   {id:'dsv41-flash-1017',g:'trend', hf:'deepseek-ai/DeepSeek-V4.1-Flash-1017',  name:'DeepSeek-V4.1-Flash-1017 763B (MoE)',params:763.21, active:33.99, layers:40, hidden:5120, kvHeads:1,  headDim:512, kvLayers:31, swLayers:40, swWindow:128, mla:true},
@@ -397,7 +397,7 @@ const MODELS = [
   {id:'qwen38-flash',   g:'trend', hf:'Qwen/Qwen3.8-Flash-Next',                name:'Qwen3.8 Flash-Next 180B (MoE)',     params:180,    active:8.08,  layers:48, hidden:2560, kvHeads:2,  headDim:256, kvLayers:12},
   {id:'flint',          g:'trend', hf:'RecursiveSI/flint',                      name:'Flint 40B (MoE, coding)',           params:39.79,  active:2.69,  layers:49, hidden:2048, kvHeads:4,  headDim:128, kvLayers:14, swLayers:35, swWindow:513},
   {id:'nanbeige43-33b', g:'trend', hf:'Nanbeige/Nanbeige4.3-33B',               name:'Nanbeige4.3 33B',                   params:33.12,  active:33.12, layers:52, hidden:7168, kvHeads:8,  headDim:128, kvLayers:52},
-  {id:'raon1-mini',     g:'trend', hf:'KRAFTON/Raon-1-mini-preview',            name:'Raon-1 mini preview 29B (MoE)',     params:28.78,  active:3.58,  layers:25, hidden:2560, kvHeads:1,  headDim:576, kvLayers:25, mla:true},
+  {id:'dory1-4b',       g:'trend', hf:'nvidia/NVIDIA-Nemotron-Labs-Dory1.0-4B-BF16', name:'Nemotron-Labs Dory 1.0 4B',     params:3.98,   active:3.98,  layers:72, hidden:2560, kvHeads:4,  headDim:256, kvLayers:9,  swLayers:27, swWindow:1024},
   {id:'beam1',          g:'trend', hf:'reflection/Beam-1.0-501B-A23B',          name:'Beam-1.0 501B-A23B (MoE)',          params:501.27, active:23,    layers:52, hidden:5120, kvHeads:8,  headDim:128, kvLayers:9,  swLayers:43, swWindow:512},
   {id:'spark-x26-4b',   g:'trend', hf:'XHToken/Spark-X2.6-4B',                  name:'Spark-X2.6 4B',                     params:4.11,   active:4.11,  layers:36, hidden:2560, kvHeads:4,  headDim:256, kvLayers:9,  swLayers:27, swWindow:512},
   {id:'glm53-flash',    g:'trend', hf:'zai-org/GLM-5.3-Flash',                  name:'GLM-5.3-Flash 321B (MoE)',          params:321.32, active:17.04, layers:45, hidden:4096, kvHeads:1,  headDim:512, kvLayers:45, mla:true},
