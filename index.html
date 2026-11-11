@@ -385,32 +385,32 @@ const GPUS = [
   {id:'mi300x', name:'AMD Instinct MI300X 192GB',         mem:192, bw:5.3,  bf16:1307, fp8:2615, tdp:750,  price:20000, form:'OAM',  fast:true},
   {id:'mi350x', name:'AMD Instinct MI350X 288GB',         mem:288, bw:8.0,  bf16:2300, fp8:4600, tdp:1000, price:25000, form:'OAM',  fast:true},
 ];
-// Katalog model: diambil dari Hugging Face (trending text-generation & image-text-to-text, 4 Nov 2026).
+// Katalog model: diambil dari Hugging Face (trending text-generation & image-text-to-text, 11 Nov 2026).
 // Arsitektur dibaca dari config.json tiap repo; total parameter dari metadata safetensors.
 // kvLayers = layer attention penuh (KV tumbuh dengan konteks); swLayers/swWindow = layer sliding window.
-const HF_DATE = '4 Nov 2026';
+const HF_DATE = '11 Nov 2026';
 const MODELS = [
   // --- trending
-  {id:'dsv41-flash-1017',g:'trend', hf:'deepseek-ai/DeepSeek-V4.1-Flash-1017',  name:'DeepSeek-V4.1-Flash-1017 763B (MoE)',params:763.21, active:33.99, layers:40, hidden:5120, kvHeads:1,  headDim:512, kvLayers:31, swLayers:40, swWindow:128, mla:true},
-  {id:'minimax-m31-flash',g:'trend',hf:'MiniMaxAI/MiniMax-M3.1-Flash',          name:'MiniMax-M3.1-Flash 220B (MoE)',     params:220.49, active:12.78, layers:60, hidden:6144, kvHeads:4,  headDim:128, kvLayers:60},
+  {id:'kimi-k31-pro',   g:'trend', hf:'moonshotai/Kimi-K3.1-Pro',               name:'Kimi K3.1 Pro 2,8T (MoE)',          params:2780.11,active:64.22, layers:93, hidden:7168, kvHeads:1,  headDim:576, kvLayers:93, mla:true},
   {id:'qwen38-27b',     g:'trend', hf:'Qwen/Qwen3.8-27B',                       name:'Qwen3.8 27B',                       params:27.78,  active:27.78, layers:64, hidden:5120, kvHeads:4,  headDim:256, kvLayers:16},
-  {id:'qwen38-flash',   g:'trend', hf:'Qwen/Qwen3.8-Flash-Next',                name:'Qwen3.8 Flash-Next 180B (MoE)',     params:180,    active:8.08,  layers:48, hidden:2560, kvHeads:2,  headDim:256, kvLayers:12},
-  {id:'flint',          g:'trend', hf:'RecursiveSI/flint',                      name:'Flint 40B (MoE, coding)',           params:39.79,  active:2.69,  layers:49, hidden:2048, kvHeads:4,  headDim:128, kvLayers:14, swLayers:35, swWindow:513},
-  {id:'nanbeige43-33b', g:'trend', hf:'Nanbeige/Nanbeige4.3-33B',               name:'Nanbeige4.3 33B',                   params:33.12,  active:33.12, layers:52, hidden:7168, kvHeads:8,  headDim:128, kvLayers:52},
-  {id:'dory1-4b',       g:'trend', hf:'nvidia/NVIDIA-Nemotron-Labs-Dory1.0-4B-BF16', name:'Nemotron-Labs Dory 1.0 4B',     params:3.98,   active:3.98,  layers:72, hidden:2560, kvHeads:4,  headDim:256, kvLayers:9,  swLayers:27, swWindow:1024},
-  {id:'beam1',          g:'trend', hf:'reflection/Beam-1.0-501B-A23B',          name:'Beam-1.0 501B-A23B (MoE)',          params:501.27, active:23,    layers:52, hidden:5120, kvHeads:8,  headDim:128, kvLayers:9,  swLayers:43, swWindow:512},
-  {id:'spark-x26-4b',   g:'trend', hf:'XHToken/Spark-X2.6-4B',                  name:'Spark-X2.6 4B',                     params:4.11,   active:4.11,  layers:36, hidden:2560, kvHeads:4,  headDim:256, kvLayers:9,  swLayers:27, swWindow:512},
-  {id:'glm53-flash',    g:'trend', hf:'zai-org/GLM-5.3-Flash',                  name:'GLM-5.3-Flash 321B (MoE)',          params:321.32, active:17.04, layers:45, hidden:4096, kvHeads:1,  headDim:512, kvLayers:45, mla:true},
-  {id:'glm53',          g:'trend', hf:'zai-org/GLM-5.3',                        name:'GLM-5.3 753B (MoE)',                params:753.33, active:41.61, layers:78, hidden:6144, kvHeads:1,  headDim:576, kvLayers:78, mla:true},
-  {id:'dsv41-flash',    g:'trend', hf:'deepseek-ai/DeepSeek-V4.1-Flash',        name:'DeepSeek-V4.1-Flash 763B (MoE)',    params:763.21, active:33.99, layers:40, hidden:5120, kvHeads:1,  headDim:512, kvLayers:31, swLayers:40, swWindow:128, mla:true},
-  {id:'kimi-k3',        g:'trend', hf:'moonshotai/Kimi-K3',                     name:'Kimi K3 2,8T (MoE)',                params:2779.93,active:64.22, layers:93, hidden:7168, kvHeads:1,  headDim:576, kvLayers:93, mla:true},
-  {id:'gemma4-31b',     g:'trend', hf:'google/gemma-4-31B-it',                  name:'Gemma 4 31B',                       params:31.27,  active:31.27, layers:60, hidden:5376, kvHeads:16, headDim:256, kvLayers:10, swLayers:50, swWindow:1024},
+  {id:'ernie55-flash',  g:'trend', hf:'baidu/ERNIE-5.5-Flash-Base',             name:'ERNIE-5.5-Flash-Base 286B (MoE)',   params:286.25, active:11.59, layers:43, hidden:4096, kvHeads:1,  headDim:576, kvLayers:6.29, swLayers:43, swWindow:128, mla:true},
   {id:'lfm3-17b',       g:'trend', hf:'LiquidAI/LFM3-1.7B',                     name:'LFM3 1.7B',                         params:1.73,   active:1.73,  layers:24, hidden:2048, kvHeads:4,  headDim:128, kvLayers:6,  swLayers:5,  swWindow:256},
-  {id:'lfm3-vl-2b',     g:'trend', hf:'LiquidAI/LFM3-VL-2B',                    name:'LFM3-VL 2B',                        params:1.92,   active:1.92,  layers:24, hidden:2048, kvHeads:4,  headDim:128, kvLayers:6,  swLayers:5,  swWindow:256},
-  {id:'ling31-flash-1019',g:'trend',hf:'inclusionAI/Ling-3.1-flash-1019',       name:'Ling-3.1-flash-1019 572B (MoE)',    params:572.12, active:17.05, layers:72, hidden:4096, kvHeads:1,  headDim:576, kvLayers:72, mla:true},
+  {id:'qwen38-flash',   g:'trend', hf:'Qwen/Qwen3.8-Flash-Next',                name:'Qwen3.8 Flash-Next 180B (MoE)',     params:180,    active:8.08,  layers:48, hidden:2560, kvHeads:2,  headDim:256, kvLayers:12},
+  {id:'dsv41-flash-1017',g:'trend', hf:'deepseek-ai/DeepSeek-V4.1-Flash-1017',  name:'DeepSeek-V4.1-Flash-1017 763B (MoE)',params:763.21, active:33.99, layers:40, hidden:5120, kvHeads:1,  headDim:512, kvLayers:31, swLayers:40, swWindow:128, mla:true},
+  {id:'longcat25',      g:'trend', hf:'meituan-longcat/LongCat-2.5',            name:'LongCat-2.5 1,8T (MoE)',            params:1779.75,active:29.23, layers:38, hidden:8192, kvHeads:1,  headDim:576, kvLayers:38, mla:true},
   {id:'mistral-large4', g:'trend', hf:'mistralai/Mistral-Large-4-1T-A52B',      name:'Mistral Large 4 1T-A52B (MoE)',     params:1053.23,active:52,    layers:72, hidden:6144, kvHeads:1,  headDim:576, kvLayers:72, mla:true},
   {id:'sensenova-loop-9b',g:'trend',hf:'sensenova/SenseNova-Loop-9B-Preview',   name:'SenseNova-Loop 9B preview',         params:9.66,   active:9.66,  layers:32, hidden:4096, kvHeads:4,  headDim:256, kvLayers:8},
+  {id:'dsv41-flash',    g:'trend', hf:'deepseek-ai/DeepSeek-V4.1-Flash',        name:'DeepSeek-V4.1-Flash 763B (MoE)',    params:763.21, active:33.99, layers:40, hidden:5120, kvHeads:1,  headDim:512, kvLayers:31, swLayers:40, swWindow:128, mla:true},
+  {id:'glm53-flash',    g:'trend', hf:'zai-org/GLM-5.3-Flash',                  name:'GLM-5.3-Flash 321B (MoE)',          params:321.32, active:17.04, layers:45, hidden:4096, kvHeads:1,  headDim:512, kvLayers:45, mla:true},
   {id:'mage-vl-cowork', g:'trend', hf:'microsoft/Mage-VL-Cowork',               name:'Mage-VL-Cowork 4.7B',               params:4.74,   active:4.74,  layers:36, hidden:2560, kvHeads:8,  headDim:128, kvLayers:36},
+  {id:'flint',          g:'trend', hf:'RecursiveSI/flint',                      name:'Flint 40B (MoE, coding)',           params:39.79,  active:2.69,  layers:49, hidden:2048, kvHeads:4,  headDim:128, kvLayers:14, swLayers:35, swWindow:513},
+  {id:'nanbeige43-33b', g:'trend', hf:'Nanbeige/Nanbeige4.3-33B',               name:'Nanbeige4.3 33B',                   params:33.12,  active:33.12, layers:52, hidden:7168, kvHeads:8,  headDim:128, kvLayers:52},
+  {id:'gemma4-31b',     g:'trend', hf:'google/gemma-4-31B-it',                  name:'Gemma 4 31B',                       params:31.27,  active:31.27, layers:60, hidden:5376, kvHeads:16, headDim:256, kvLayers:10, swLayers:50, swWindow:1024},
+  {id:'spark-x26-4b',   g:'trend', hf:'XHToken/Spark-X2.6-4B',                  name:'Spark-X2.6 4B',                     params:4.11,   active:4.11,  layers:36, hidden:2560, kvHeads:4,  headDim:256, kvLayers:9,  swLayers:27, swWindow:512},
+  {id:'glm53',          g:'trend', hf:'zai-org/GLM-5.3',                        name:'GLM-5.3 753B (MoE)',                params:753.33, active:41.61, layers:78, hidden:6144, kvHeads:1,  headDim:576, kvLayers:78, mla:true},
+  {id:'hy4-preview',    g:'trend', hf:'tencent/Hy4-preview',                    name:'Hy4 preview 780B (MoE)',            params:779.96, active:41.44, layers:78, hidden:6144, kvHeads:1,  headDim:576, kvLayers:78, mla:true},
+  {id:'dory1-4b',       g:'trend', hf:'nvidia/NVIDIA-Nemotron-Labs-Dory1.0-4B-BF16', name:'Nemotron-Labs Dory 1.0 4B',     params:3.98,   active:3.98,  layers:72, hidden:2560, kvHeads:4,  headDim:256, kvLayers:9,  swLayers:27, swWindow:1024},
+  {id:'mimo-v26-pro-rl',g:'trend', hf:'XiaomiMiMo/MiMo-V2.6-Pro-RL',            name:'MiMo-V2.6-Pro-RL 1T (MoE)',         params:1024.22,active:44.98, layers:70, hidden:6144, kvHeads:8,  headDim:192, kvLayers:10, swLayers:60, swWindow:128},
   // --- populer & banyak dipakai di enterprise
   {id:'gptoss-20b',     g:'pop', hf:'openai/gpt-oss-20b',                       name:'gpt-oss-20b (MoE)',                 params:20.91,  active:3.6,   layers:24, hidden:2880, kvHeads:8,  headDim:64,  kvLayers:12, swLayers:12, swWindow:128},
   {id:'gptoss-120b',    g:'pop', hf:'openai/gpt-oss-120b',                      name:'gpt-oss-120b (MoE)',                params:116.83, active:5.1,   layers:36, hidden:2880, kvHeads:8,  headDim:64,  kvLayers:18, swLayers:18, swWindow:128},
